@@ -96,7 +96,11 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
   return (
     <div
       style={style}
-      className="group relative flex flex-col bg-brand-surface rounded-lg b-border b-shadow overflow-visible transition-all duration-300 animate-slide-up-fade-in collection-item b-shadow-hover"
+      className={
+        `group relative flex flex-col bg-brand-surface rounded-lg b-border b-shadow transition-all duration-300 animate-slide-up-fade-in collection-item b-shadow-hover overflow-visible ${
+          isMenuOpen ? 'z-50' : 'z-0'
+        }`
+      }
     >
       <div 
         className="relative aspect-[4/3] w-full cursor-pointer"
