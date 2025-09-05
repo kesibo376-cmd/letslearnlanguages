@@ -1,7 +1,8 @@
 
 import React from 'react';
 import type { StreakData } from '../types';
-import FireIcon from './icons/FireIcon';
+import FlowerOuiIcon from './icons/FlowerOuiIcon';
+import FlowerNonIcon from './icons/FlowerNonIcon';
 
 interface StreakTrackerProps {
   streakData: StreakData;
@@ -42,7 +43,11 @@ const StreakTracker: React.FC<StreakTrackerProps> = ({ streakData, isTodayComple
       {/* Streak Count */}
       <div className="flex items-center gap-4 self-start sm:self-center">
         <div className="flex-shrink-0 flex items-center justify-center bg-brand-surface-light rounded-full w-14 h-14 b-border">
-            <FireIcon size={28} className="text-orange-400" isFilled={isTodayComplete}/>
+            {isTodayComplete ? (
+              <FlowerOuiIcon size={28} className="text-pink-400"/>
+            ) : (
+              <FlowerNonIcon size={28} className="text-brand-text-secondary"/>
+            )}
         </div>
         <div>
             <span className="font-bold text-4xl leading-none">{currentStreak}</span>
