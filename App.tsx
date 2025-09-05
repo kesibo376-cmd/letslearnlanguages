@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -35,7 +38,6 @@ export default function App() {
     collections,
     title,
     theme,
-    layoutMode,
     streakData,
     hideCompleted,
     reviewModeEnabled,
@@ -55,53 +57,6 @@ export default function App() {
       setGlobalTheme(theme);
     }
   }, [theme, setGlobalTheme]);
-
-  // Theme-based click sound effect
-  const themeRef = useRef(theme);
-  useEffect(() => {
-    themeRef.current = theme;
-  }, [theme]);
-
-  useEffect(() => {
-    let minecraftAudio: HTMLAudioElement | null = new Audio('https://www.myinstants.com/media/sounds/minecraft-click-cropped.mp3');
-    minecraftAudio.preload = 'auto';
-    
-    let retroAudio: HTMLAudioElement | null = new Audio('https://www.myinstants.com/media/sounds/typewriter.mp3');
-    retroAudio.preload = 'auto';
-
-    const handleGlobalClick = (event: MouseEvent) => {
-      let audioToPlay: HTMLAudioElement | null = null;
-      
-      if (themeRef.current === 'minecraft') {
-        audioToPlay = minecraftAudio;
-      } else if (themeRef.current === 'retro-web') {
-        audioToPlay = retroAudio;
-      }
-      
-      if (audioToPlay) {
-        const target = event.target as HTMLElement;
-
-        const interactiveElement = target.closest(
-          'button, a, input, [role="button"], [role="switch"], [role="option"], select, .cursor-pointer'
-        );
-
-        const excludeSound = target.closest('[data-no-sound="true"]');
-
-        if (interactiveElement && !excludeSound) {
-          audioToPlay.currentTime = 0;
-          audioToPlay.play().catch(() => {}); // Ignore play errors on rapid clicks
-        }
-      }
-    };
-
-    document.addEventListener('click', handleGlobalClick);
-
-    return () => {
-      document.removeEventListener('click', handleGlobalClick);
-      minecraftAudio = null; // Cleanup
-      retroAudio = null; // Cleanup
-    };
-  }, []); // Run only once on mount
 
   const { recordActivity, recordCompletion, unrecordCompletion, isTodayComplete, resetStreakProgress } = useStreak(streakData, updateUserData);
 
@@ -170,7 +125,7 @@ export default function App() {
     if (podcastWasCompleted && streakData.enabled && streakData.difficulty !== 'easy') {
       recordCompletion(id);
     }
-  }, [podcasts, recordActivity, recordCompletion, streakData.enabled, streakData.difficulty, updateUserData, updatePodcastInState]);
+  }, [podcasts, recordActivity, recordCompletion, streakData.enabled, streakData.difficulty, updatePodcastInState]);
 
     const updatePodcastDuration = useCallback((id: string, duration: number) => {
     if (!isNaN(duration) && duration > 0) {
@@ -185,6 +140,9 @@ export default function App() {
   const allPodcastsSorted = useMemo(() => {
     return [...podcasts].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   }, [podcasts]);
+
+  // Fix: Determine player layout mode based on custom artwork.
+  const layoutMode: LayoutMode = useMemo(() => (customArtwork ? 'default' : 'pimsleur'), [customArtwork]);
 
   const handlePlaybackEnd = () => {
     if (isPlayerExpanded) {
@@ -342,31 +300,6 @@ export default function App() {
     updateUserData({ podcasts: resetPodcasts });
     resetStreakProgress();
   };
-  
-  const handleResetCollectionProgress = (collectionId: string) => {
-    const podcastsToResetIds = new Set(
-      podcasts
-        .filter(p => (collectionId === 'uncategorized' ? p.collectionId === null : p.collectionId === collectionId))
-        .map(p => p.id)
-    );
-
-    if (podcastsToResetIds.size === 0) return;
-    
-    const updatedPodcasts = podcasts.map(p => {
-      if (podcastsToResetIds.has(p.id)) {
-        return { ...p, progress: 0, isListened: false };
-      }
-      return p;
-    });
-
-    // Also remove completions from today's streak
-    const updatedStreakData = {
-        ...streakData,
-        completedToday: streakData.completedToday.filter(id => !podcastsToResetIds.has(id))
-    };
-
-    updateUserData({ podcasts: updatedPodcasts, streakData: updatedStreakData });
-  };
 
   const handleClearLocalFiles = async () => {
     if (!user) return;
@@ -427,17 +360,6 @@ export default function App() {
     [podcasts, currentPodcastId]
   );
   
-  const artworkForPlayer = useMemo(() => {
-    if (!currentPodcast) {
-      return customArtwork; // Global artwork if no podcast is playing
-    }
-    const collection = collections.find(c => c.id === currentPodcast.collectionId);
-    if (collection?.artworkUrl) {
-      return collection.artworkUrl;
-    }
-    return customArtwork; // Fallback to global artwork
-  }, [currentPodcast, collections, customArtwork]);
-
   if (isAuthLoading || (user && isDataLoading)) {
     return <LoadingSpinner />;
   }
@@ -472,8 +394,13 @@ export default function App() {
         isPlayerExpanded={isPlayerExpanded}
         setIsPlaying={setIsPlaying}
         setIsPlayerExpanded={setIsPlayerExpanded}
+        updatePodcastProgress={updatePodcastProgress}
+        handlePlaybackEnd={handlePlaybackEnd}
         customArtwork={customArtwork}
+        playbackRate={playbackRate}
+        setPlaybackRate={setPlaybackRate}
         activePlayerTime={activePlayerTime}
+        setActivePlayerTime={setActivePlayerTime}
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
         hideCompleted={hideCompleted}
@@ -490,8 +417,6 @@ export default function App() {
         dataToExport={data}
         theme={theme}
         setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
-        layoutMode={layoutMode}
-        setLayoutMode={(newLayout: LayoutMode) => updateUserData({ layoutMode: newLayout })}
         setStreakData={handleSetStreakData}
         setPodcasts={(newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts })}
         setCollections={(newCollections: Collection[]) => updateUserData({ collections: newCollections })}
@@ -516,7 +441,6 @@ export default function App() {
         onFileUpload={handleFileUpload}
         onDeletePodcast={handleDeletePodcast}
         onResetProgress={handleResetProgress}
-        onResetCollectionProgress={handleResetCollectionProgress}
         onClearLocalFiles={handleClearLocalFiles}
         onResetPreloaded={handleResetPreloaded}
         onClearAll={handleClearAll}
@@ -533,7 +457,7 @@ export default function App() {
           onEnded={handlePlaybackEnd}
           isPlayerExpanded={isPlayerExpanded}
           setIsPlayerExpanded={setIsPlayerExpanded}
-          artworkUrl={artworkForPlayer}
+          artworkUrl={customArtwork}
           playbackRate={playbackRate}
           onPlaybackRateChange={setPlaybackRate}
           currentTime={activePlayerTime}

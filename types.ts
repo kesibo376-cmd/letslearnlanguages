@@ -13,12 +13,9 @@ export interface Podcast {
 export interface Collection {
   id: string;
   name:string;
-  artworkUrl?: string;
 }
 
 export type Theme = 'charcoal' | 'minecraft' | 'brutalist' | 'retro-web' | 'minimal' | 'hand-drawn';
-
-export type LayoutMode = 'default' | 'pimsleur';
 
 export type StreakDifficulty = 'easy' | 'normal' | 'hard' | 'extreme';
 
@@ -39,3 +36,6 @@ export interface User {
   uid: string;
   email: string | null;
 }
+
+// Fix: Export LayoutMode type for player component
+export type LayoutMode = 'default' | 'pimsleur';
