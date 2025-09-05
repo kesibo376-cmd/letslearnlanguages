@@ -43,6 +43,15 @@ const Player: React.FC<PlayerProps> = ({
   onDurationFetch,
   layoutMode,
 }) => {
+  const togglePlayPause = useCallback(() => {
+  if (!audioRef.current) return;
+  if (isPlaying) {
+    audioRef.current.pause();
+  } else {
+    audioRef.current.play().catch(e => console.error("Playback error:", e));
+  }
+  setIsPlaying(p => !p);
+}, [isPlaying, setIsPlaying]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
   const [dragState, setDragState] = useState({ isDragging: false, startY: 0, deltaY: 0 });
@@ -204,7 +213,7 @@ const Player: React.FC<PlayerProps> = ({
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <h3 className="text-4xl font-bold text-brand-text mb-2">{formatTime(podcast.duration - currentTime)}</h3>
-                    <button onClick={() => setIsPlaying(p => !p)} className={`bg-brand-primary text-brand-text-on-primary rounded-full p-5 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95`}>
+                    <button onClick={togglePlayPause} className={`bg-brand-primary text-brand-text-on-primary rounded-full p-5 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95`}>
                         {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
                     </button>
                 </div>
@@ -246,7 +255,7 @@ const Player: React.FC<PlayerProps> = ({
             {playbackRate}x
         </button>
         <button onClick={() => handleSkip(-5)} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">-5s</button>
-        <button onClick={() => setIsPlaying(p => !p)} className={`bg-brand-primary text-brand-text-on-primary rounded-full p-5 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow`}>
+        <button onClick={togglePlayPause} className={`bg-brand-primary text-brand-text-on-primary rounded-full p-5 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow`}>
           {isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
         </button>
         <button onClick={() => handleSkip(5)} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">+5s</button>
@@ -312,7 +321,7 @@ const Player: React.FC<PlayerProps> = ({
               <button onClick={(e) => { e.stopPropagation(); handleSkip(-10); }} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full b-border transform transition-transform active:scale-90" aria-label="Skip backward 10 seconds">
                 <RedoIcon size={20} className="backward -scale-x-100" />
               </button>
-              <button onClick={(e) => { e.stopPropagation(); setIsPlaying(p => !p); }} className="text-brand-text p-3 rounded-full hover:bg-brand-surface b-border transform transition-transform active:scale-90" aria-label={isPlaying ? "Pause" : "Play"}>
+              <button onClick={(e) => { e.stopPropagation(); togglePlayPause(); }} className="text-brand-text p-3 rounded-full hover:bg-brand-surface b-border transform transition-transform active:scale-90" aria-label={isPlaying ? "Pause" : "Play"}>
                 {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
               </button>
               <button onClick={(e) => { e.stopPropagation(); handleSkip(10); }} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full b-border transform transition-transform active:scale-90" aria-label="Skip forward 10 seconds">
