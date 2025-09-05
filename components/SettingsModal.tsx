@@ -189,12 +189,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                     </div>
                 </div>
             </div>
-             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-                <div><p className="font-semibold">Pimsleur Layout</p><p className="text-sm text-brand-text-secondary">Use the circular, time-focused player.</p></div>
-                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
-                    <ToggleSwitch isOn={playerLayout === 'pimsleur'} handleToggle={() => onSetPlayerLayout(playerLayout === 'pimsleur' ? 'default' : 'pimsleur')} />
-                </div>
-            </div>
+             
           </div>
           
           {/* Section: Features */}

@@ -237,9 +237,19 @@ const AppUI: React.FC<AppUIProps> = (props) => {
      }
   };
 
-  // Fix: Add handlers for collection artwork and progress reset to pass to CollectionList
   const handleSetCollectionArtwork = useCallback((collectionId: string, url: string | null) => {
-    setCollections(collections.map(c => c.id === collectionId ? { ...c, artworkUrl: url || undefined } : c));
+    setCollections(collections.map(c => {
+      if (c.id === collectionId) {
+        const newCollection = { ...c };
+        if (url) {
+          newCollection.artworkUrl = url;
+        } else {
+          delete newCollection.artworkUrl;
+        }
+        return newCollection;
+      }
+      return c;
+    }));
   }, [collections, setCollections]);
   
   const handleResetCollectionProgress = useCallback((collectionId: string | null) => {
@@ -378,7 +388,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                           <PlusIcon size={16}/> New Collection
                           </button>
                       </div>
-                      <div className="mt-4 bg-brand-surface rounded-lg shadow-lg b-border b-shadow overflow-hidden">
+                      <div className="mt-4 ">
                         <CollectionList
                             collections={collections}
                             podcasts={podcasts}
