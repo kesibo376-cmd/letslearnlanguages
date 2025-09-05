@@ -105,19 +105,24 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, totalStorageUsed
   } = props;
     
-  const visiblePodcasts = useMemo(() => {
-    let filtered = allPodcastsSorted;
-    if (hideCompleted) {
-        filtered = filtered.filter(p => !p.isListened);
+  const podcastsInCurrentView = useMemo(() => {
+    if (!useCollectionsView || !currentView) {
+        return allPodcastsSorted;
     }
-    if (useCollectionsView && currentView) {
-        filtered = filtered.filter(p => (currentView === 'uncategorized' ? p.collectionId === null : p.collectionId === currentView));
-    }
-    return filtered;
-  }, [allPodcastsSorted, hideCompleted, useCollectionsView, currentView]);
+    return allPodcastsSorted.filter(p => (
+        currentView === 'uncategorized' ? p.collectionId === null : p.collectionId === currentView
+    ));
+  }, [allPodcastsSorted, useCollectionsView, currentView]);
 
+  const visiblePodcasts = useMemo(() => {
+      if (hideCompleted) {
+          return podcastsInCurrentView.filter(p => !p.isListened);
+      }
+      return podcastsInCurrentView;
+  }, [podcastsInCurrentView, hideCompleted]);
+  
   const { listenedCount, totalCount, percentage } = useMemo(() => {
-    const targetPodcasts = (useCollectionsView && currentView) ? visiblePodcasts : allPodcastsSorted;
+    const targetPodcasts = podcastsInCurrentView;
     const listened = targetPodcasts.filter(p => p.isListened).length;
     const total = targetPodcasts.length;
     return {
@@ -125,7 +130,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
       totalCount: total,
       percentage: total > 0 ? (listened / total) * 100 : 0,
     };
-  }, [visiblePodcasts, allPodcastsSorted, useCollectionsView, currentView]);
+  }, [podcastsInCurrentView]);
 
   const currentCollectionName = useMemo(() => {
       if (!currentView) return null;
@@ -427,6 +432,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                               activePlayerTime={activePlayerTime}
                               collections={collections}
                               useCollectionsView={useCollectionsView}
+                              playerLayout={playerLayout}
                           />
                       ) : (
                           <div className="text-center p-12 text-brand-text-secondary">
