@@ -1,4 +1,3 @@
-
 import React, { useMemo, useCallback, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode } from '../types';
@@ -108,8 +107,6 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     setIsCreateCollectionModalOpen, currentView, setCurrentView, isClearDataModalOpen,
     setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, totalStorageUsed
   } = props;
-    
-  const [swipeState, setSwipeState] = useState({ isSwiping: false, startX: 0, deltaX: 0, isAnimating: false });
 
   const podcastsInCurrentView = useMemo(() => {
     if (!useCollectionsView || !currentView) {
@@ -291,42 +288,6 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     return allPodcastsSorted.find(p => p.collectionId === collectionId && !p.isListened);
   }, [allPodcastsSorted, useCollectionsView, currentView]);
 
-  const handleSwipeStart = (e: React.TouchEvent) => {
-      if (showCollections || isPlayerExpanded || !currentView) return;
-      setSwipeState({ isSwiping: true, startX: e.touches[0].clientX, deltaX: 0, isAnimating: false });
-  };
-
-  const handleSwipeMove = (e: React.TouchEvent) => {
-      if (!swipeState.isSwiping || isPlayerExpanded) return;
-      const currentX = e.touches[0].clientX;
-      const delta = Math.max(0, currentX - swipeState.startX);
-      setSwipeState(prev => ({ ...prev, deltaX: delta }));
-  };
-
-  const handleSwipeEnd = () => {
-      if (!swipeState.isSwiping || isPlayerExpanded) return;
-      
-      const shouldGoBack = swipeState.deltaX > window.innerWidth / 3;
-      
-      if (shouldGoBack) {
-          setSwipeState(prev => ({ ...prev, deltaX: window.innerWidth, isSwiping: false, isAnimating: true }));
-          setTimeout(() => {
-              setCurrentView(null);
-              setSwipeState({ isSwiping: false, startX: 0, deltaX: 0, isAnimating: false });
-          }, 300);
-      } else {
-          setSwipeState(prev => ({ ...prev, deltaX: 0, isSwiping: false, isAnimating: true }));
-          setTimeout(() => {
-              setSwipeState(prev => ({ ...prev, isAnimating: false }));
-          }, 300);
-      }
-  };
-
-  const podcastViewContainerStyle: React.CSSProperties = {
-      transform: `translateX(${swipeState.deltaX}px)`,
-      transition: swipeState.isAnimating ? 'transform 0.3s ease-out' : 'none',
-  };
-
   return (
     <>
       <OnboardingModal
@@ -454,13 +415,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                       </div>
                     </>
                   ) : (
-                    <div
-                      onTouchStart={handleSwipeStart}
-                      onTouchMove={handleSwipeMove}
-                      onTouchEnd={handleSwipeEnd}
-                      onTouchCancel={handleSwipeEnd}
-                      style={podcastViewContainerStyle}
-                    >
+                    <div>
                       {playerLayout === 'pimsleur' ? (
                           <div className="flex justify-between items-center mb-4">
                               <button onClick={() => setCurrentView(null)} className="text-3xl font-bold text-brand-text flex items-center gap-2 group">
