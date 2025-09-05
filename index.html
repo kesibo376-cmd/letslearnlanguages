@@ -57,17 +57,17 @@
       }
       [data-theme="brutalist"] {
         --font-sans: 'Courier New', monospace;
-        --brand-bg: #F5F5DC; /* Beige */
-        --brand-surface: #F5F5DC;
-        --brand-surface-light: #E0E0C8; /* Slightly darker beige */
+        --brand-bg: #F0F0F0; /* Light Elegant Gray */
+        --brand-surface: #F0F0F0;
+        --brand-surface-light: #E0E0E0; /* Slightly darker gray */
         --brand-primary: #0000FF; /* Bright Blue */
         --brand-primary-hover: #0000CC;
         --brand-text: #000000;
         --brand-text-secondary: #555555;
-        --brand-text-on-primary: #F5F5DC;
+        --brand-text-on-primary: #F0F0F0;
         --brand-border-color: #000000;
         --brand-gradient-start: #0000FF20;
-        --brand-gradient-end: #F5F5DC;
+        --brand-gradient-end: #F0F0F0;
       }
       [data-theme="retro-web"] {
         --font-sans: 'Press Start 2P', monospace;
@@ -223,6 +223,9 @@
       }
       [data-theme="minecraft"] .b-shadow, [data-theme="minecraft"] .shadow-lg, [data-theme="minecraft"] .shadow-2xl, [data-theme="minecraft"] .b-shadow-hover:hover { box-shadow: none; }
       [data-theme="minecraft"] .b-shadow-hover:hover, [data-theme="minecraft"] button.b-shadow-hover:active { transform: none; }
+      [data-theme="minecraft"] .collection-item.b-shadow-hover:hover {
+        transform: translateY(-4px); /* A simple pixel-perfect vertical lift */
+      }
       [data-theme="minecraft"] .w-full.bg-brand-surface.rounded-full, [data-theme="minecraft"] .w-full.bg-brand-surface {
           height: 12px;
           background: #000;
@@ -309,6 +312,17 @@
           background: #000;
           border: 2px solid var(--mc-border-dark);
           padding: 8px;
+      }
+
+      /* Fix for Minecraft collection folder icon color */
+      [data-theme="minecraft"] .collection-folder-fill {
+        color: var(--brand-primary) !important;
+      }
+
+      /* Custom color for Minecraft streak chart active days */
+      [data-theme="minecraft"] .streak-tracker .bg-brand-primary {
+        background-color: #FFAA00 !important;
+        border-color: #552A00 !important;
       }
 
       /* Brutalist & Retro Overrides */
@@ -446,6 +460,69 @@
       button, .cursor-pointer {
         transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
       }
+
+      /* Streak Fire Icon Theme Styles */
+      .streak-fire-icon {
+        transition: all 0.3s ease;
+      }
+      .streak-fire-icon:not(.filled) {
+        stroke: var(--brand-text-secondary);
+        fill: none;
+      }
+
+      [data-theme="charcoal"] .streak-fire-icon.filled {
+        fill: url(#fire-gradient);
+        stroke: #E65100; /* Darker orange for outline */
+      }
+      
+      [data-theme="minimal"] .streak-fire-icon.filled {
+          fill: #ff9500; /* Apple Orange */
+          stroke: #ff9500;
+      }
+      
+      [data-theme="hand-drawn"] .streak-fire-icon {
+          filter: url(#wavy-filter);
+          transform: rotate(-2deg);
+      }
+      [data-theme="hand-drawn"] .streak-fire-icon.filled {
+          fill: #ff7043; /* A nice, ink-like orange */
+          stroke: var(--brand-border-color);
+      }
+      
+      [data-theme="brutalist"] .streak-fire-icon {
+        stroke-width: 3px;
+      }
+      [data-theme="brutalist"] .streak-fire-icon.filled {
+          fill: #FF5722;
+          stroke: var(--brand-border-color);
+      }
+      
+      [data-theme="minecraft"] .streak-fire-icon {
+        image-rendering: pixelated;
+      }
+      [data-theme="minecraft"] .streak-fire-icon:not(.filled) {
+        fill: var(--mc-border-dark);
+        stroke: none;
+      }
+      [data-theme="minecraft"] .streak-fire-icon.filled {
+        fill: #FFAA00; /* Minecraft lava orange */
+        stroke: #552A00; /* Dark brown outline */
+        stroke-width: 2px;
+      }
+      
+      [data-theme="retro-web"] .streak-fire-icon {
+        image-rendering: pixelated;
+      }
+      [data-theme="retro-web"] .streak-fire-icon:not(.filled) {
+        fill: var(--brand-text-secondary);
+        stroke: none;
+      }
+      [data-theme="retro-web"] .streak-fire-icon.filled {
+        fill: #FF0000; /* Classic 8-bit red/orange */
+        stroke: var(--brand-border-color);
+        stroke-width: 2px;
+      }
+
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -469,6 +546,10 @@
       }
     }
     </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
     <script type="importmap">
 {
   "imports": {
@@ -486,6 +567,18 @@
 </script>
 </head>
   <body class="bg-brand-bg font-sans">
+    <svg width="0" height="0" style="position:absolute;z-index:-1">
+      <defs>
+        <linearGradient id="fire-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#FF9800" />
+          <stop offset="100%" style="stop-color:#F44336" />
+        </linearGradient>
+        <filter id="wavy-filter">
+          <feTurbulence baseFrequency="0.05 0.05" numOctaves="2" seed="2" stitchTiles="stitch" type="fractalNoise"/>
+          <feDisplacementMap in="SourceGraphic" scale="1.5" />
+        </filter>
+      </defs>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
