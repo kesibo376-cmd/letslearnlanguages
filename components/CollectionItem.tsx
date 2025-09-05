@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { Theme } from '../types';
-import BookIcon from './icons/BookIcon';
 import PlayIcon from './icons/PlayIcon';
 import ThreeDotsIcon from './icons/ThreeDotsIcon';
 import EditIcon from './icons/EditIcon';
@@ -118,22 +117,10 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
             alt={`Artwork for ${collection.name}`}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
           />
-        ) : theme === 'minecraft' ? (
-          <div className="w-full h-full flex items-center justify-center bg-brand-surface-light">
-            <img
-              src="https://i.imgur.com/e3l9k04.png"
-              alt="Minecraft dirt block"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : theme === 'retro-web' ? (
-          <div className="w-full h-full flex items-center justify-center bg-brand-surface-light">
-            <BookIcon size={80} completionPercentage={collection.completionPercentage} />
-          </div>
         ) : (
-            <div className="w-full h-full flex items-center justify-center bg-brand-surface-light text-brand-text-secondary">
-                <FolderIcon size={64} className="collection-folder-fill"/>
-            </div>
+          <div className="w-full h-full flex items-center justify-center bg-brand-surface-light text-brand-text-secondary">
+              <FolderIcon size={64} className="collection-folder-fill"/>
+          </div>
         )}
         
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300" />
