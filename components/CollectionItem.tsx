@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { Theme } from '../types';
 import BookIcon from './icons/BookIcon';
@@ -90,17 +91,19 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
     }
   };
 
+  const handleRemoveArtwork = () => {
+    if (window.confirm(`Are you sure you want to remove the artwork for "${collection.name}"?`)) {
+      onSetArtwork(collection.id, null);
+    }
+  };
+
   const isPixelatedTheme = theme === 'minecraft' || theme === 'retro-web';
   const hasArtwork = !!collection.artworkUrl;
 
   return (
     <div
       style={style}
-      className={
-        `group relative flex flex-col bg-brand-surface rounded-lg b-border b-shadow transition-all duration-300 animate-slide-up-fade-in collection-item b-shadow-hover overflow-visible ${
-          isMenuOpen ? 'z-50' : 'z-0'
-        }`
-      }
+      className={`group relative flex flex-col bg-brand-surface rounded-lg b-border b-shadow overflow-hidden transition-all duration-300 animate-slide-up-fade-in collection-item b-shadow-hover ${isMenuOpen ? 'z-30' : ''}`}
     >
       <div 
         className="relative aspect-[4/3] w-full cursor-pointer"
@@ -171,10 +174,13 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
                         <ThreeDotsIcon size={20} />
                     </button>
                     {isMenuOpen && (
-                         <div className="absolute right-0 top-full mt-2 w-56 bg-brand-surface-light rounded-md shadow-lg z-70 b-border animate-scale-in origin-top-right">
+                         <div className="absolute right-0 top-full mt-2 w-56 bg-brand-surface-light rounded-md shadow-lg z-20 b-border animate-scale-in origin-top-right">
                             <ul className="py-1">
                                 <li><button onClick={(e) => handleAction(e, handleRename)} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center gap-3"><EditIcon size={16}/> Rename Collection</button></li>
                                 <li><button onClick={(e) => handleAction(e, handleSetArtwork)} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center gap-3"><ImageIcon size={16}/> Set Artwork</button></li>
+                                {collection.artworkUrl && (
+                                    <li><button onClick={(e) => handleAction(e, handleRemoveArtwork)} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-3"><TrashIcon size={16}/> Remove Artwork</button></li>
+                                )}
                                 <li><button onClick={(e) => handleAction(e, handleReset)} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center gap-3"><RedoIcon size={16}/> Reset Progress</button></li>
                                 <div className="my-1 border-t border-brand-surface"></div>
                                 <li><button onClick={(e) => handleAction(e, handleDelete)} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-3"><TrashIcon size={16}/> Delete Collection</button></li>
