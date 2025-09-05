@@ -13,6 +13,7 @@ export interface Podcast {
 export interface Collection {
   id: string;
   name:string;
+  artworkUrl?: string;
 }
 
 export type Theme = 'charcoal' | 'minecraft' | 'brutalist' | 'retro-web' | 'minimal' | 'hand-drawn';
