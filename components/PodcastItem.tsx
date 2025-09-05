@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import type { Podcast, Collection, LayoutMode } from '../types';
+import type { Podcast, Collection, LayoutMode, Theme } from '../types';
 import { formatTime, formatBytes } from '../lib/utils';
 import PlayIcon from './icons/PlayIcon';
 import PauseIcon from './icons/PauseIcon';
@@ -24,6 +25,7 @@ interface PodcastItemProps {
   useCollectionsView: boolean;
   playerLayout: LayoutMode;
   collectionArtworkUrl?: string | null;
+  theme: Theme;
 }
 
 const PodcastItem: React.FC<PodcastItemProps> = ({ 
@@ -41,7 +43,8 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
   progressOverride,
   useCollectionsView,
   playerLayout,
-  collectionArtworkUrl
+  collectionArtworkUrl,
+  theme
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
@@ -81,6 +84,9 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
   if (playerLayout === 'pimsleur' && useCollectionsView) {
     const lessonName = podcast.name.replace(/preloaded audio/i, 'Lesson').toUpperCase();
     const isInProgress = progressToShow > 0 && !isCompleted;
+    const defaultArtwork = theme === 'minecraft'
+      ? 'https://i.imgur.com/2V31G2G.png' // grass block
+      : 'https://i.imgur.com/Q3QfWqV.png'; // old default
 
     return (
       <div
@@ -96,7 +102,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
           onClick={() => onSelect(podcast.id)}
         >
           <img
-            src={collectionArtworkUrl || 'https://i.imgur.com/Q3QfWqV.png'}
+            src={collectionArtworkUrl || defaultArtwork}
             alt={`Artwork for ${podcast.name}`}
             className="w-full h-full object-cover rounded-md"
           />

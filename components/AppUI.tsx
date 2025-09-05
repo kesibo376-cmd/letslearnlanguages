@@ -1,3 +1,4 @@
+
 import React, { useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode } from '../types';
@@ -465,6 +466,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                                   useCollectionsView={useCollectionsView}
                                   playerLayout={playerLayout}
                                   collectionArtworkUrl={collectionArtworkUrl}
+                                  theme={theme}
                               />
                           ) : (
                               <div className="text-center p-12 text-brand-text-secondary">

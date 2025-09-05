@@ -1,5 +1,6 @@
+
 import React, { useRef, useEffect, useState } from 'react';
-import type { Podcast, Collection, LayoutMode } from '../types';
+import type { Podcast, Collection, LayoutMode, Theme } from '../types';
 import PodcastItem from './PodcastItem';
 
 interface PodcastListProps {
@@ -16,10 +17,11 @@ interface PodcastListProps {
   useCollectionsView: boolean;
   playerLayout: LayoutMode;
   collectionArtworkUrl?: string | null;
+  theme: Theme;
 }
 
 const PodcastList: React.FC<PodcastListProps> = (props) => {
-  const { podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, activePlayerTime, collections, useCollectionsView, playerLayout, collectionArtworkUrl } = props;
+  const { podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, activePlayerTime, collections, useCollectionsView, playerLayout, collectionArtworkUrl, theme } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
@@ -69,6 +71,7 @@ const PodcastList: React.FC<PodcastListProps> = (props) => {
           useCollectionsView={useCollectionsView}
           playerLayout={playerLayout}
           collectionArtworkUrl={collectionArtworkUrl}
+          theme={theme}
         />
       ))}
     </div>

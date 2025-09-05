@@ -97,7 +97,6 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
     }
   };
 
-  const isPixelatedTheme = theme === 'minecraft' || theme === 'retro-web';
   const hasArtwork = !!collection.artworkUrl;
 
   return (
@@ -113,16 +112,24 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
         className="relative aspect-[4/3] w-full cursor-pointer"
         onClick={onNavigate}
       >
-        {isPixelatedTheme && !hasArtwork ? (
-          <div className="w-full h-full flex items-center justify-center bg-brand-surface-light">
-              <BookIcon size={80} completionPercentage={collection.completionPercentage} />
-          </div>
-        ) : hasArtwork ? (
+        {hasArtwork ? (
           <img
             src={collection.artworkUrl}
             alt={`Artwork for ${collection.name}`}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-300 group-hover:scale-105"
           />
+        ) : theme === 'minecraft' ? (
+          <div className="w-full h-full flex items-center justify-center bg-brand-surface-light">
+            <img
+              src="https://i.imgur.com/2V31G2G.png"
+              alt="Minecraft grass block"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : theme === 'retro-web' ? (
+          <div className="w-full h-full flex items-center justify-center bg-brand-surface-light">
+            <BookIcon size={80} completionPercentage={collection.completionPercentage} />
+          </div>
         ) : (
             <div className="w-full h-full flex items-center justify-center bg-brand-surface-light text-brand-text-secondary">
                 <FolderIcon size={64} className="collection-folder-fill"/>
