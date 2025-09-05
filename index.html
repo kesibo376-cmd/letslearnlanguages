@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23000'/><path d='M40 30 L70 50 L40 70 Z' fill='%23fff'/></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23000'/><path d='M40 30 L70 50 L40 70 Z' fill='%23fff'/></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Local Audio Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&family=VT323&family=Press+Start+2P&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+      :root, [data-theme="charcoal"] {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        --brand-bg: #121212;
+        --brand-surface: #1e1e1e;
+        --brand-surface-light: #282828;
+        --brand-primary: #1DB954;
+        --brand-primary-hover: #1ED760;
+        --brand-text: #FFFFFF;
+        --brand-text-secondary: #B3B3B3;
+        --brand-text-on-primary: #121212;
+        --brand-border-color: #282828;
+        --brand-gradient-start: #1DB95420;
+        --brand-gradient-end: #121212;
+      }
+      [data-theme="charcoal"] button.active {
+        background-color: var(--brand-surface-light);
+        border: 1px solid var(--brand-primary);
+      }
+      [data-theme="minecraft"] {
+        --font-sans: 'VT323', monospace;
+        --brand-bg: #5E3A1E; /* Dirt color for fallback */
+        --brand-surface: #C6C6C6; /* Stone Grey UI panel */
+        --brand-surface-light: #DDDDDD;
+        --brand-primary: #55ACEE; /* Diamond Blue */
+        --brand-primary-hover: #77BEEE;
+        --brand-text: #FFFFFF;
+        --brand-text-secondary: #AAAAAA;
+        --brand-text-on-primary: #FFFFFF; /* Text on blue buttons will be white */
+        --brand-border-color: #000000;
+        --brand-gradient-start: rgba(85, 172, 238, 0.2);
+        --brand-gradient-end: rgba(85, 172, 238, 0);
+
+        /* Minecraft specific vars */
+        --mc-button-bg: #C6C6C6;
+        --mc-button-hover-bg: #DEDEDE;
+        --mc-button-text: #000000;
+        --mc-border-dark: #373737;
+        --mc-border-light: #FFFFFF;
+        --mc-text-shadow: 2px 2px #373737;
+        --mc-progress-bar: #AAAAAA;
+
+        cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAWCAYAAAAVLa4NAAAAAXNSR0IArs4c6QAAABxpVGlTCQ8AAAAADUlNSUgAAABVAAAAFoLe204AAABzSURBVDhPzZNbDoAgDER9W/yP5K8eKE1gC30Yh14WWpYlSz18gB/gZ2cYYwAP5WpUorisX/d1/sQDOHWeYcV2DjV2AY7e5AUkAVdAVoA2QBvYBSgDPgEnwAU4AlvAGrABboBfwCfwD7AE3gG3gD5gD5yBfcAX8AS+AY+Bf/8/wAmAInBGBg/5AAAAAElFTSuQmCC") 10 10, auto;
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAD9JREFUOE9jZKAQMOL5/38GBgYHBgYGEIZw//79/z/D/3//+c/w/8d/hv8+fmb47+M/w38f/xkGBgYAIN4f5d2kIYYAAAAASUVORK5CYII=');
+        image-rendering: pixelated;
+      }
+      [data-theme="brutalist"] {
+        --font-sans: 'Courier New', monospace;
+        --brand-bg: #F0F0F0; /* Light Elegant Gray */
+        --brand-surface: #F0F0F0;
+        --brand-surface-light: #E0E0E0; /* Slightly darker gray */
+        --brand-primary: #0000FF; /* Bright Blue */
+        --brand-primary-hover: #0000CC;
+        --brand-text: #000000;
+        --brand-text-secondary: #555555;
+        --brand-text-on-primary: #F0F0F0;
+        --brand-border-color: #000000;
+        --brand-gradient-start: #0000FF20;
+        --brand-gradient-end: #F0F0F0;
+      }
+      [data-theme="retro-web"] {
+        --font-sans: 'Press Start 2P', monospace;
+        --brand-bg: #C0C0C0;
+        --brand-surface: #C0C0C0;
+        --brand-surface-light: #DFDFDF;
+        --brand-primary: #000080;
+        --brand-primary-hover: #0000A0;
+        --brand-text: #000000;
+        --brand-text-secondary: #404040;
+        --brand-text-on-primary: #FFFFFF;
+        --brand-border-color: #000000;
+        --brand-gradient-start: #00008020;
+        --brand-gradient-end: #C0C0C0;
+        cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAeCAYAAAAsEj5rAAAAAXNSR0IArs4c6QAAANhJREFUWEftlVsOwjAIQ/1e7+L9X+1HVEij2gns2kABKcefi2sSg83g350B4xgX/gGOAywYdJBCBAc8kMMEKxQA8MkhDj3A0QDHB2gA0kF6AEgB6QWgo9ADQANIC8AqCE2ACaAXYAM4b1kCaIHc7wO6iU9p+Np/oA7q5gS0gS1ALtS12tYAVhX427YGrCpw560BfCsw9acAvhS4+aeADwUu/mXA4wIXvynA8QJ3fy3AqQJ3/zHgFID7Bzw+wL2fDPgYwP2vDPgQwP1nDPgEwP1DD/gGgPtvD/AIAPffPcA5APB67wDkH//8/gH0ZJQf2V5ARwAAAABJRU5ErkJggg=='), auto;
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAAXNSR0IArs4c6QAAABNJREFUGFdjZGBg+M+ABTAx/A8A4a8f9L3ONmcAAAAASUVORK5CYII=');
+        background-repeat: repeat;
+      }
+      
+      [data-theme="minimal"] {
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        --brand-bg: #f9f9fb;
+        --brand-surface: #ffffff;
+        --brand-surface-light: #f2f2f7;
+        --brand-primary: #007aff;
+        --brand-primary-hover: #0070e6;
+        --brand-text: #1d1d1f;
+        --brand-text-secondary: #6e6e73;
+        --brand-text-on-primary: #ffffff;
+        --brand-border-color: #e5e5ea;
+        --brand-gradient-start: rgba(0, 122, 255, 0.1);
+        --brand-gradient-end: #f9f9fb;
+      }
+      
+      [data-theme="hand-drawn"] {
+        --font-sans: 'Caveat', cursive;
+        --brand-bg: #fdfaf4;
+        --brand-surface: #ffffff;
+        --brand-surface-light: #f7f2e9;
+        --brand-primary: #0057b8; /* Blue Ink */
+        --brand-primary-hover: #004c9f;
+        --brand-text: #3a3a3a;
+        --brand-text-secondary: #707070;
+        --brand-text-on-primary: #ffffff;
+        --brand-border-color: #3a3a3a;
+        --brand-gradient-start: rgba(0, 87, 184, 0.1);
+        --brand-gradient-end: #fdfaf4;
+      }
+      
+      /* Specific overrides for the Minimal theme */
+      [data-theme="minimal"] .rounded-lg {
+        border-radius: 16px;
+      }
+      [data-theme="minimal"] .rounded-md {
+        border-radius: 12px;
+      }
+      [data-theme="minimal"] .b-border {
+        border: 1px solid var(--brand-border-color);
+      }
+      [data-theme="minimal"] .b-shadow {
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+      [data-theme="minimal"] .shadow-lg,
+      [data-theme="minimal"] .shadow-2xl {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+
+      [data-theme="minimal"] .b-shadow-hover:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      }
+      [data-theme="minimal"] button.b-shadow-hover:active {
+        transform: translateY(0px);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+      [data-theme="minimal"] .animated-player-bg {
+        background: var(--brand-surface) !important;
+      }
+      [data-theme="minimal"] button.active {
+        background-color: #e5e5ea;
+        color: var(--brand-text);
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        transform: translateY(0);
+      }
+      
+      /* Specific overrides for Hand-drawn Theme */
+      [data-theme="hand-drawn"] body {
+          font-size: 18px;
+      }
+      [data-theme="hand-drawn"] h1, [data-theme="hand-drawn"] h2, [data-theme="hand-drawn"] h3, [data-theme="hand-drawn"] input, [data-theme="hand-drawn"] button span {
+          font-weight: 700;
+          letter-spacing: 0.5px;
+      }
+       [data-theme="hand-drawn"] .rounded-lg { border-radius: 8px 12px 7px 10px; }
+       [data-theme="hand-drawn"] .rounded-md { border-radius: 5px 8px 6px 7px; }
+       [data-theme="hand-drawn"] .rounded-full { border-radius: 45% 55% 40% 60% / 60% 40% 55% 45%; }
+       [data-theme="hand-drawn"] .b-border { border: 2px solid var(--brand-border-color); }
+       [data-theme="hand-drawn"] .b-shadow { box-shadow: 3px 3px 0px 0px rgba(58,58,58,0.2); }
+       [data-theme="hand-drawn"] .b-shadow-hover:hover {
+          transform: translateY(-2px) rotate(-0.5deg);
+          box-shadow: 5px 5px 0px 0px rgba(58,58,58,0.2);
+        }
+       [data-theme="hand-drawn"] button.b-shadow-hover:active {
+          transform: translateY(1px) rotate(0.2deg);
+          box-shadow: 2px 2px 0px 0px rgba(58,58,58,0.2);
+        }
+       [data-theme="hand-drawn"] .redo-icon {
+          transform: rotate(5deg);
+        }
+       [data-theme="hand-drawn"] button.active {
+          transform: translateY(1px) rotate(0.2deg);
+          box-shadow: 2px 2px 0px 0px rgba(58,58,58,0.2);
+          background-color: var(--brand-surface-light);
+        }
+
+      /* Minecraft Theme Overrides */
+      [data-theme="minecraft"] body { font-size: 20px; }
+      [data-theme="minecraft"] * { font-family: var(--font-sans); }
+      [data-theme="minecraft"] h1, [data-theme="minecraft"] h2, [data-theme="minecraft"] h3, [data-theme="minecraft"] p, [data-theme="minecraft"] span:not(button span), [data-theme="minecraft"] div {
+         text-shadow: var(--mc-text-shadow);
+      }
+      [data-theme="minecraft"] button, [data-theme="minecraft"] button span, [data-theme="minecraft"] .text-brand-text-on-primary {
+          text-shadow: none !important;
+          color: var(--mc-button-text) !important;
+      }
+      [data-theme="minecraft"] .bg-brand-primary, [data-theme="minecraft"] button {
+          background-color: var(--mc-button-bg) !important;
+          border-width: 2px;
+          border-style: solid;
+          border-color: var(--mc-border-light) var(--mc-border-dark) var(--mc-border-dark) var(--mc-border-light);
+      }
+      [data-theme="minecraft"] button:hover {
+         background-color: var(--mc-button-hover-bg) !important;
+      }
+      [data-theme="minecraft"] button:active, [data-theme="minecraft"] button.active {
+          border-color: var(--mc-border-dark) var(--mc-border-light) var(--mc-border-light) var(--mc-border-dark) !important;
+          background-color: #B0B0B0 !important;
+          color: var(--mc-button-text) !important;
+          text-shadow: none !important;
+      }
+      [data-theme="minecraft"] .text-red-500, [data-theme="minecraft"] .text-red-500:hover {
+          color: #FF5555 !important;
+      }
+      [data-theme="minecraft"] .text-brand-primary {
+          color: var(--mc-progress-bar) !important;
+      }
+      [data-theme="minecraft"] .rounded-lg, [data-theme="minecraft"] .rounded-md, [data-theme="minecraft"] .rounded-full { border-radius: 0 !important; }
+      [data-theme="minecraft"] .b-border {
+        border-width: 2px;
+        border-style: solid;
+        border-color: var(--mc-border-dark);
+      }
+      [data-theme="minecraft"] .b-shadow, [data-theme="minecraft"] .shadow-lg, [data-theme="minecraft"] .shadow-2xl, [data-theme="minecraft"] .b-shadow-hover:hover { box-shadow: none; }
+      [data-theme="minecraft"] .b-shadow-hover:hover, [data-theme="minecraft"] button.b-shadow-hover:active { transform: none; }
+      [data-theme="minecraft"] .collection-item.b-shadow-hover:hover {
+        transform: translateY(-4px); /* A simple pixel-perfect vertical lift */
+      }
+      [data-theme="minecraft"] .w-full.bg-brand-surface.rounded-full, [data-theme="minecraft"] .w-full.bg-brand-surface {
+          height: 12px;
+          background: #000;
+          border: 2px solid #000;
+          padding: 2px;
+      }
+      [data-theme="minecraft"] .w-full.bg-brand-surface.rounded-full > div, [data-theme="minecraft"] .w-full.bg-brand-surface > div {
+          background-color: var(--mc-progress-bar);
+      }
+      [data-theme="minecraft"] .absolute.top-0 .h-1.bg-brand-surface {
+          height: 4px;
+          padding: 0;
+          border: 0;
+      }
+      [data-theme="minecraft"] .absolute.top-0 .h-1.bg-brand-surface > div {
+        background-color: var(--mc-progress-bar);
+      }
+      [data-theme="minecraft"] input, [data-theme="minecraft"] select {
+        background: var(--mc-border-dark);
+        border: 2px solid #000;
+        color: var(--brand-text);
+        text-shadow: var(--mc-text-shadow);
+      }
+      [data-theme="minecraft"] .w-12.h-6 { width: 60px; height: 28px; background: var(--mc-border-dark); border: 2px solid #000; }
+      [data-theme="minecraft"] .translate-x-6 { transform: translateX(32px); }
+      [data-theme="minecraft"] .h-4.w-4 { height: 20px; width: 20px; background: var(--mc-button-bg); border-width: 2px; border-style: solid; border-color: var(--mc-border-light) var(--mc-border-dark) var(--mc-border-dark) var(--mc-border-light); }
+      [data-theme="minecraft"] ::-webkit-scrollbar { width: 16px; }
+      [data-theme="minecraft"] ::-webkit-scrollbar-track { background: #000; }
+      [data-theme="minecraft"] ::-webkit-scrollbar-thumb { background: var(--mc-button-bg); border: 2px solid; border-color: var(--mc-border-light) var(--mc-border-dark) var(--mc-border-dark) var(--mc-border-light); }
+
+      /* Minecraft Onboarding Modal Styles */
+      [data-theme="minecraft"] .modal-panel.onboarding {
+        background-color: #373737;
+        border-width: 4px;
+        border-style: solid;
+        border-color: #000;
+        box-shadow: inset 0 0 0 2px var(--mc-border-dark), inset 0 0 0 4px #000;
+        padding: 0; /* Padding is handled by inner elements */
+      }
+      
+      [data-theme="minecraft"] .onboarding-header {
+        padding: 16px;
+        text-align: center;
+        border-bottom: 2px solid var(--mc-border-dark);
+      }
+      [data-theme="minecraft"] .onboarding-content {
+        padding: 24px 16px;
+        flex-grow: 1;
+        overflow-y: auto;
+      }
+      [data-theme="minecraft"] .onboarding-footer {
+        padding: 16px;
+        border-top: 2px solid var(--mc-border-dark);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      
+      [data-theme="minecraft"] .onboarding-skip-btn {
+        background: none !important;
+        border: none !important;
+        color: var(--brand-text-secondary) !important;
+        text-decoration: underline;
+        text-shadow: none !important;
+        font-size: 16px;
+      }
+      [data-theme="minecraft"] .onboarding-skip-btn:hover {
+        color: var(--brand-text) !important;
+      }
+      
+      [data-theme="minecraft"] .modal-panel.onboarding h2,
+      [data-theme="minecraft"] .modal-panel.onboarding h3 {
+        color: var(--brand-text);
+        text-shadow: 2px 2px #000;
+      }
+
+      [data-theme="minecraft"] .modal-panel.onboarding p,
+      [data-theme="minecraft"] .modal-panel.onboarding label {
+        color: var(--brand-text-secondary);
+      }
+
+      [data-theme="minecraft"] .modal-panel.onboarding input,
+      [data-theme="minecraft"] .modal-panel.onboarding select {
+          background: #000;
+          border: 2px solid var(--mc-border-dark);
+          padding: 8px;
+      }
+
+      /* Fix for Minecraft collection folder icon color */
+      [data-theme="minecraft"] .collection-folder-fill {
+        color: var(--brand-primary) !important;
+      }
+
+      /* Custom color for Minecraft streak chart active days */
+      [data-theme="minecraft"] .streak-tracker .bg-brand-primary {
+        background-color: #FFAA00 !important;
+        border-color: #552A00 !important;
+      }
+
+      /* Brutalist & Retro Overrides */
+      [data-theme="brutalist"] .rounded-lg,
+      [data-theme="brutalist"] .rounded-md,
+      [data-theme="brutalist"] .rounded-full,
+      [data-theme="retro-web"] .rounded-lg,
+      [data-theme="retro-web"] .rounded-md,
+      [data-theme="retro-web"] .rounded-full {
+        border-radius: 0 !important;
+      }
+      
+      [data-theme="retro-web"] * {
+        transition: none !important;
+      }
+
+      [data-theme="brutalist"] .b-border {
+        border: 2px solid var(--brand-border-color);
+      }
+      [data-theme="retro-web"] .b-border {
+        border: 2px outset #DFDFDF;
+        border-right: 2px solid #555;
+        border-bottom: 2px solid #555;
+      }
+      
+      [data-theme="retro-web"] button:active,
+      [data-theme="retro-web"] .active {
+        border-style: inset;
+      }
+      
+      [data-theme="brutalist"] .b-shadow,
+      [data-theme="retro-web"] .b-shadow {
+        box-shadow: 4px 4px 0px var(--brand-border-color);
+      }
+      [data-theme="retro-web"] .b-shadow {
+        box-shadow: none;
+      }
+
+      [data-theme="brutalist"] .b-shadow-hover:hover {
+        box-shadow: 6px 6px 0px var(--brand-border-color);
+        transform: translate(-2px, -2px);
+      }
+      [data-theme="brutalist"] button.b-shadow-hover:active {
+        box-shadow: 2px 2px 0px var(--brand-border-color);
+        transform: translate(2px, 2px);
+      }
+      [data-theme="brutalist"] button.active {
+        background-color: var(--brand-surface-light);
+        box-shadow: inset 2px 2px 0px var(--brand-border-color);
+        transform: none;
+      }
+      [data-theme="retro-web"] .b-shadow-hover:hover,
+      [data-theme="retro-web"] button.b-shadow-hover:active {
+        transform: none;
+        box-shadow: none;
+      }
+
+      /* Icon Theme Overrides */
+      [data-theme="brutalist"] .redo-icon {
+        stroke-width: 3;
+      }
+
+      [data-theme="retro-web"] .redo-icon path {
+        display: none;
+      }
+
+      [data-theme="retro-web"] .redo-icon {
+        background: currentColor;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        display: inline-block;
+      }
+
+      [data-theme="retro-web"] .redo-icon.forward {
+        -webkit-mask-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAGFJREFUOE9jZKAQMOLz/38GBgYHBgYGEDsDsSkQ/4H4ExB/A/EzEP8C4k+g/g/Ez0D8B4gfA/FDIAYk3gbiN0D8D4j/AfE/QPwPiAOB+AEQXwfiFyB+B8QXIH4ExItA/BSIFwMHAL2sO4fPjAhPAAAAAElFTSuQmCC');
+        mask-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAGFJREFUOE9jZKAQMOLz/38GBgYHBgYGEDsDsSkQ/4H4ExB/A/EzEP8C4k+g/g/Ez0D8B4gfA/FDIAYk3gbiN0D8D4j/AfE/QPwPiAOB+AEQXwfiFyB+B8QXIH4ExItA/BSIFwMHAL2sO4fPjAhPAAAAAElFTSuQmCC');
+      }
+
+      [data-theme="retro-web"] .redo-icon.backward {
+        -webkit-mask-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAGFJREFUOE9jZKAQMOLz/38GBgYHBgYGEDsDsSkQ/4H4ExB/A/EzEP8C4k+g/g/Ez0D8B4gfA/FDIAYk3gbiN0D8D4j/AfE/QPwPiAOB+AEQXwfiFyB+B8QXIH4ExItA/BSIFwMHAL2sO4fPjAhPAAAAAElFTSuQmCC');
+        mask-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAGFJREFUOE9jZKAQMOLz/38GBgYHBgYGEDsDsSkQ/4H4ExB/A/EzEP8C4k+g/g/Ez0D8B4gfA/FDIAYk3gbiN0D8D4j/AfE/QPwPiAOB+AEQXwfiFyB+B8QXIH4ExItA/BSIFwMHAL2sO4fPjAhPAAAAAElFTSuQmCC');
+      }
+
+
+      /* Animations */
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes scaleIn {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+      @keyframes slideUpFadeIn {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+       @keyframes shrinkOut {
+        from { transform: scale(1); height: 100%; opacity: 1; }
+        to { transform: scale(0.9); height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; margin: 0; border: 0;}
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+      }
+      
+      @keyframes confetti-fall {
+        0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+      }
+
+      .confetti-piece {
+        position: absolute;
+        width: 8px;
+        height: 16px;
+        opacity: 0;
+        animation: confetti-fall 5s linear forwards;
+      }
+      
+      .confetti-piece.pixel {
+        width: 8px;
+        height: 8px;
+      }
+
+      .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+      .animate-scale-in { animation: scaleIn 0.3s ease-out forwards; }
+      .animate-slide-up-fade-in { animation: slideUpFadeIn 0.4s ease-out forwards; opacity: 0; }
+      .animate-shrink-out { animation: shrinkOut 0.3s ease-in-out forwards; }
+      .animate-pulse-slow { animation: pulse 4s ease-in-out infinite; }
+      
+      button, .cursor-pointer {
+        transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+      }
+
+      /* Streak Fire Icon Theme Styles */
+      .streak-fire-icon {
+        transition: all 0.3s ease;
+      }
+      .streak-fire-icon:not(.filled) {
+        stroke: var(--brand-text-secondary);
+        fill: none;
+      }
+
+      [data-theme="charcoal"] .streak-fire-icon.filled {
+        fill: url(#fire-gradient);
+        stroke: #E65100; /* Darker orange for outline */
+      }
+      
+      [data-theme="minimal"] .streak-fire-icon.filled {
+          fill: #ff9500; /* Apple Orange */
+          stroke: #ff9500;
+      }
+      
+      [data-theme="hand-drawn"] .streak-fire-icon {
+          filter: url(#wavy-filter);
+          transform: rotate(-2deg);
+      }
+      [data-theme="hand-drawn"] .streak-fire-icon.filled {
+          fill: #ff7043; /* A nice, ink-like orange */
+          stroke: var(--brand-border-color);
+      }
+      
+      [data-theme="brutalist"] .streak-fire-icon {
+        stroke-width: 3px;
+      }
+      [data-theme="brutalist"] .streak-fire-icon.filled {
+          fill: #FF5722;
+          stroke: var(--brand-border-color);
+      }
+      
+      [data-theme="minecraft"] .streak-fire-icon {
+        image-rendering: pixelated;
+      }
+      [data-theme="minecraft"] .streak-fire-icon:not(.filled) {
+        fill: var(--mc-border-dark);
+        stroke: none;
+      }
+      [data-theme="minecraft"] .streak-fire-icon.filled {
+        fill: #FFAA00; /* Minecraft lava orange */
+        stroke: #552A00; /* Dark brown outline */
+        stroke-width: 2px;
+      }
+      
+      [data-theme="retro-web"] .streak-fire-icon {
+        image-rendering: pixelated;
+      }
+      [data-theme="retro-web"] .streak-fire-icon:not(.filled) {
+        fill: var(--brand-text-secondary);
+        stroke: none;
+      }
+      [data-theme="retro-web"] .streak-fire-icon.filled {
+        fill: #FF0000; /* Classic 8-bit red/orange */
+        stroke: var(--brand-border-color);
+        stroke-width: 2px;
+      }
+
+    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-bg': 'var(--brand-bg)',
+            'brand-surface': 'var(--brand-surface)',
+            'brand-surface-light': 'var(--brand-surface-light)',
+            'brand-primary': 'var(--brand-primary)',
+            'brand-primary-hover': 'var(--brand-primary-hover)',
+            'brand-text': 'var(--brand-text)',
+            'brand-text-secondary': 'var(--brand-text-secondary)',
+            'brand-text-on-primary': 'var(--brand-text-on-primary)',
+          },
+          fontFamily: {
+            sans: ['var(--font-sans)', 'sans-serif'],
+          }
+        }
+      }
+    }
+    </script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "uuid": "https://aistudiocdn.com/uuid@^11.1.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.2.1/",
+    "idb": "https://aistudiocdn.com/idb@^8.0.3"
+  }
+}
+</script>
+</head>
+  <body class="bg-brand-bg font-sans">
+    <svg width="0" height="0" style="position:absolute;z-index:-1">
+      <defs>
+        <linearGradient id="fire-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#FF9800" />
+          <stop offset="100%" style="stop-color:#F44336" />
+        </linearGradient>
+        <filter id="wavy-filter">
+          <feTurbulence baseFrequency="0.05 0.05" numOctaves="2" seed="2" stitchTiles="stitch" type="fractalNoise"/>
+          <feDisplacementMap in="SourceGraphic" scale="1.5" />
+        </filter>
+      </defs>
+    </svg>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
