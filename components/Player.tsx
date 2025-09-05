@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Podcast, LayoutMode } from '../types';
 import { formatTime } from '../lib/utils';
@@ -14,7 +15,8 @@ interface PlayerProps {
   onProgressSave: (id: string, progress: number) => void;
   onEnded: () => void;
   isPlayerExpanded: boolean;
-  setIsPlayerExpanded: (isExpanded: boolean) => void;
+  // Fix: Correctly type the state setter to allow functional updates.
+  setIsPlayerExpanded: (update: React.SetStateAction<boolean>) => void;
   artworkUrl?: string | null;
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
@@ -117,10 +119,8 @@ const Player: React.FC<PlayerProps> = ({
     setIsPlaying(p => !p);
   }, [setIsPlaying]);
 
-  // --- Keyboard Shortcuts for Expanded Player ---
+  // --- Keyboard Shortcuts ---
   useEffect(() => {
-    if (!isPlayerExpanded) return;
-
     const handleKeyDown = (event: KeyboardEvent) => {
       // Ignore key presses if the user is typing in an input field.
       const target = event.target as HTMLElement;
@@ -132,12 +132,15 @@ const Player: React.FC<PlayerProps> = ({
       ) {
         return;
       }
-
-      if (event.key === ' ') {
+      
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        // Toggles between mini-player and expanded player
+        setIsPlayerExpanded(prev => !prev);
+      } else if (event.key === ' ' && isPlayerExpanded) {
+        // Toggles play/pause only when player is expanded
         event.preventDefault(); // Prevent page from scrolling
         handleTogglePlayPause();
-      } else if (event.key === 'Escape') {
-        setIsPlayerExpanded(false);
       }
     };
 
