@@ -357,48 +357,33 @@ const DEFAULT_STREAK_DATA: StreakData = {
   history: [],
 };
 
-export const getDefaultData = () => {
-    const collectionCounters: { [key: string]: number } = {};
-
-    const podcasts = PRELOADED_PODCAST_URLS.map((item, index) => {
-        let podcastName = `Audio ${index + 1}`; // Fallback name
-        if (item.collectionName) {
-            collectionCounters[item.collectionName] = (collectionCounters[item.collectionName] || 0) + 1;
-            podcastName = `${item.collectionName} ${collectionCounters[item.collectionName]}`;
-        }
-        return {
-            id: `preloaded-${index}`,
-            name: podcastName,
-            url: item.url,
-            duration: 0,
-            progress: 0,
-            isListened: false,
-            storage: 'preloaded' as const,
-            collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
-        };
-    });
-
-    const collections = PRELOADED_PODCAST_URLS
+export const getDefaultData = () => ({
+    podcasts: PRELOADED_PODCAST_URLS.map((item, index) => ({
+      id: `preloaded-${index}`,
+      name: `Preloaded Audio ${index + 1}`,
+      url: item.url,
+      duration: 0, // Will be fetched on playback
+      progress: 0,
+      isListened: false,
+      storage: 'preloaded' as const,
+      collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
+    })),
+    collections: PRELOADED_PODCAST_URLS
         .filter(p => p.collectionName)
         .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
-        .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
-    
-    return {
-        podcasts,
-        collections,
-        title: 'My Audio Library',
-        theme: 'charcoal' as Theme,
-        layoutMode: 'default' as LayoutMode,
-        streakData: DEFAULT_STREAK_DATA,
-        hideCompleted: false,
-        reviewModeEnabled: false,
-        completionSound: 'minecraft' as CompletionSound,
-        useCollectionsView: true,
-        playOnNavigate: false,
-        hasCompletedOnboarding: false,
-        customArtwork: null,
-    };
-};
+        .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i),
+    title: 'My Audio Library',
+    theme: 'charcoal' as Theme,
+    streakData: DEFAULT_STREAK_DATA,
+    hideCompleted: false,
+    reviewModeEnabled: false,
+    completionSound: 'minecraft' as CompletionSound,
+    useCollectionsView: true,
+    playOnNavigate: false,
+    hasCompletedOnboarding: false,
+    customArtwork: null,
+    playerLayout: 'pimsleur' as LayoutMode,
+});
 
 
 export function useUserData(userId?: string) {
@@ -412,59 +397,13 @@ export function useUserData(userId?: string) {
             return;
         }
 
-        const docRef = doc(db, 'users', userId);
+        // FIX: Use v8 compat syntax for document reference
+        const docRef = db.collection('users').doc(userId);
 
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                let userData = docSnap.data();
-                const defaultData = getDefaultData();
-                let needsUpdate = false;
-
-                // --- MIGRATION LOGIC FOR EXISTING USERS ---
-
-                // 1. Add missing preloaded collections
-                const existingCollectionIds = new Set((userData.collections || []).map((c: Collection) => c.id));
-                const missingCollections = defaultData.collections.filter(c => !existingCollectionIds.has(c.id));
-                if (missingCollections.length > 0) {
-                    userData.collections = [...(userData.collections || []), ...missingCollections];
-                    needsUpdate = true;
-                }
-                
-                // 2. Add missing preloaded podcasts and update names of existing ones
-                const defaultPodcastMap = new Map(defaultData.podcasts.map(p => [p.id, p]));
-                
-                const existingPreloadedPodcastIds = new Set(
-                    (userData.podcasts || []).filter((p: Podcast) => p.storage === 'preloaded').map((p: Podcast) => p.id)
-                );
-                const missingPodcasts = defaultData.podcasts.filter(p => !existingPreloadedPodcastIds.has(p.id));
-
-                let podcastsUpdated = false;
-                const correctedPodcasts = (userData.podcasts || []).map((p: Podcast) => {
-                    if (p.storage === 'preloaded') {
-                        const defaultVersion = defaultPodcastMap.get(p.id);
-                        if (defaultVersion && p.name !== defaultVersion.name) {
-                            podcastsUpdated = true;
-                            return { ...p, name: defaultVersion.name };
-                        }
-                    }
-                    return p;
-                });
-                
-                if (missingPodcasts.length > 0 || podcastsUpdated) {
-                    userData.podcasts = [...correctedPodcasts, ...missingPodcasts];
-                    needsUpdate = true;
-                }
-                
-                if (needsUpdate) {
-                    // Update Firestore without waiting for the result to keep UI responsive
-                    updateDoc(docRef, {
-                        podcasts: userData.podcasts,
-                        collections: userData.collections
-                    }).catch(err => console.error("Error migrating user data:", err));
-                }
-                
-                setData(userData);
-
+        // FIX: Use v8 compat syntax for onSnapshot and check .exists property
+        const unsubscribe = docRef.onSnapshot((docSnap) => {
+            if (docSnap.exists) {
+                setData(docSnap.data());
             } else {
                 // User document doesn't exist, so this is a new user.
                 // The signup function in AuthContext will create the initial document.
@@ -482,16 +421,19 @@ export function useUserData(userId?: string) {
     
     const updateUserData = useCallback(async (updates: Partial<any> | null) => {
         if (!userId) return;
-        const docRef = doc(db, 'users', userId);
+        // FIX: Use v8 compat syntax for document reference
+        const docRef = db.collection('users').doc(userId);
         try {
             if (updates === null) {
               // A null update means reset the user's data to default
-              await setDoc(docRef, getDefaultData());
+              // FIX: Use v8 compat syntax for set()
+              await docRef.set(getDefaultData());
             } else {
               // Using updateDoc directly is simpler and more robust for offline scenarios.
               // It will fail if the document doesn't exist, but that's the correct
               // behavior for an update. We handle that failure below.
-              await updateDoc(docRef, updates);
+              // FIX: Use v8 compat syntax for update()
+              await docRef.update(updates);
             }
         } catch (error) {
             console.error("Error updating user data:", error);
@@ -500,7 +442,8 @@ export function useUserData(userId?: string) {
             if (error instanceof Error && 'code' in error && (error as any).code === 'not-found') {
                 console.log("Document not found, creating it with merged data.");
                 try {
-                    await setDoc(docRef, { ...getDefaultData(), ...updates });
+                    // FIX: Use v8 compat syntax for set()
+                    await docRef.set({ ...getDefaultData(), ...updates });
                 } catch (e) {
                     console.error("Error creating document after update failed:", e);
                 }
@@ -515,7 +458,6 @@ export function useUserData(userId?: string) {
     const collections = loadedData.collections;
     const title = loadedData.title;
     const theme = loadedData.theme;
-    const layoutMode = loadedData.layoutMode;
     const streakData = loadedData.streakData;
     const hideCompleted = loadedData.hideCompleted;
     const reviewModeEnabled = loadedData.reviewModeEnabled;
@@ -524,6 +466,7 @@ export function useUserData(userId?: string) {
     const playOnNavigate = loadedData.playOnNavigate;
     const hasCompletedOnboarding = loadedData.hasCompletedOnboarding;
     const customArtwork = loadedData.customArtwork;
+    const playerLayout = loadedData.playerLayout;
     
     const totalStorageUsed = useMemo(() => {
         if (podcasts) {
@@ -541,7 +484,6 @@ export function useUserData(userId?: string) {
         collections,
         title,
         theme,
-        layoutMode,
         streakData,
         hideCompleted,
         reviewModeEnabled,
@@ -552,5 +494,6 @@ export function useUserData(userId?: string) {
         isDataLoading,
         totalStorageUsed,
         customArtwork,
+        playerLayout,
     };
 }

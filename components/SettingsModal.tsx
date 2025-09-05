@@ -1,6 +1,7 @@
 
+
 import React, { useState, useEffect } from 'react';
-import type { Theme, StreakData, StreakDifficulty, CompletionSound, User } from '../types';
+import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode } from '../types';
 import { formatBytes } from '../lib/utils';
 import ToggleSwitch from './ToggleSwitch';
 import ImageIcon from './icons/ImageIcon';
@@ -32,6 +33,8 @@ interface SettingsModalProps {
   onSetUseCollectionsView: (value: boolean) => void;
   playOnNavigate: boolean;
   onSetPlayOnNavigate: (value: boolean) => void;
+  playerLayout: LayoutMode;
+  onSetPlayerLayout: (layout: LayoutMode) => void;
   totalStorageUsed: number;
   user: User;
   onLogout: () => void;
@@ -67,7 +70,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     onSetReviewModeEnabled, customArtwork, onSetCustomArtwork, onExportData,
     onImportData, completionSound, onSetCompletionSound, useCollectionsView,
     onSetUseCollectionsView, playOnNavigate, onSetPlayOnNavigate, totalStorageUsed,
-    user, onLogout
+    user, onLogout, playerLayout, onSetPlayerLayout
   } = props;
 
   const importInputRef = React.useRef<HTMLInputElement>(null);
@@ -184,6 +187,12 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                       {customArtwork && <button onClick={handleArtworkRemove} className="text-sm px-3 py-1.5 bg-brand-surface hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border text-red-500">Remove</button>}
                       <button onClick={handleArtworkSave} className="text-sm px-4 py-1.5 bg-brand-primary text-brand-text-on-primary hover:bg-brand-primary-hover rounded-md transition-colors duration-200 b-border">Save</button>
                     </div>
+                </div>
+            </div>
+             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
+                <div><p className="font-semibold">Pimsleur Layout</p><p className="text-sm text-brand-text-secondary">Use the circular, time-focused player.</p></div>
+                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+                    <ToggleSwitch isOn={playerLayout === 'pimsleur'} handleToggle={() => onSetPlayerLayout(playerLayout === 'pimsleur' ? 'default' : 'pimsleur')} />
                 </div>
             </div>
           </div>

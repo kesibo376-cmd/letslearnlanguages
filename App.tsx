@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -48,6 +49,7 @@ export default function App() {
     isDataLoading,
     totalStorageUsed,
     customArtwork,
+    playerLayout,
   } = useUserData(user?.uid);
 
   const [globalTheme, setGlobalTheme] = useTheme();
@@ -140,9 +142,6 @@ export default function App() {
   const allPodcastsSorted = useMemo(() => {
     return [...podcasts].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   }, [podcasts]);
-
-  // Fix: Determine player layout mode based on custom artwork.
-  const layoutMode: LayoutMode = useMemo(() => (customArtwork ? 'default' : 'pimsleur'), [customArtwork]);
 
   const handlePlaybackEnd = () => {
     if (isPlayerExpanded) {
@@ -413,6 +412,8 @@ export default function App() {
         setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
         playOnNavigate={playOnNavigate}
         setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
+        playerLayout={playerLayout}
+        setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
         handleSetCustomArtwork={handleSetCustomArtwork}
         dataToExport={data}
         theme={theme}
@@ -464,7 +465,7 @@ export default function App() {
           onCurrentTimeUpdate={setActivePlayerTime}
           onDurationFetch={updatePodcastDuration}
           userId={user.uid}
-          layoutMode={layoutMode}
+          layoutMode={playerLayout}
         />
       )}
     </div>
