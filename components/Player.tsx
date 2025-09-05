@@ -117,6 +117,37 @@ const Player: React.FC<PlayerProps> = ({
     setIsPlaying(p => !p);
   }, [setIsPlaying]);
 
+  // --- Keyboard Shortcuts for Expanded Player ---
+  useEffect(() => {
+    if (!isPlayerExpanded) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore key presses if the user is typing in an input field.
+      const target = event.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      if (event.key === ' ') {
+        event.preventDefault(); // Prevent page from scrolling
+        handleTogglePlayPause();
+      } else if (event.key === 'Escape') {
+        setIsPlayerExpanded(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isPlayerExpanded, setIsPlayerExpanded, handleTogglePlayPause]);
+
   const handleSkip = useCallback((seconds: number, e?: React.MouseEvent | React.TouchEvent) => {
     e?.stopPropagation();
     if (!audioRef.current) return;
