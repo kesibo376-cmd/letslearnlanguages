@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import type { Podcast, Collection, LayoutMode } from '../types';
 import PodcastItem from './PodcastItem';
-import PimsleurPodcastItem from './PimsleurPodcastItem';
 
 interface PodcastListProps {
   podcasts: Podcast[];
@@ -15,17 +14,11 @@ interface PodcastListProps {
   activePlayerTime: number;
   collections: Collection[];
   useCollectionsView: boolean;
-  layoutMode: LayoutMode;
-  customArtwork: string | null;
+  playerLayout: LayoutMode;
 }
 
 const PodcastList: React.FC<PodcastListProps> = (props) => {
-  const { 
-    podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, 
-    onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, 
-    activePlayerTime, collections, useCollectionsView, layoutMode, customArtwork
-  } = props;
-  
+  const { podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, activePlayerTime, collections, useCollectionsView, playerLayout } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
@@ -50,51 +43,29 @@ const PodcastList: React.FC<PodcastListProps> = (props) => {
     }
   };
 
-  const listContainerClasses = layoutMode === 'pimsleur' 
-    ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-    : "relative";
-
   return (
     <div 
       ref={listRef}
-      className={listContainerClasses}
+      className="relative"
     >
       {podcasts.map((podcast, index) => (
-        layoutMode === 'pimsleur' ? (
-          <PimsleurPodcastItem
-            key={podcast.id}
-            podcast={podcast}
-            isActive={currentPodcastId === podcast.id}
-            isPlaying={isPlaying && currentPodcastId === podcast.id}
-            onSelect={onSelectPodcast}
-            onDeleteRequest={handleDeleteRequest}
-            onToggleComplete={onTogglePodcastComplete}
-            onMoveRequest={onMovePodcastToCollection}
-            collections={collections}
-            isDeleting={deletingIds.has(podcast.id)}
-            onAnimationEnd={() => handleAnimationEnd(podcast.id)}
-            style={{ animationDelay: `${index * 30}ms` }}
-            useCollectionsView={useCollectionsView}
-            customArtwork={customArtwork}
-          />
-        ) : (
-          <PodcastItem
-            key={podcast.id}
-            podcast={podcast}
-            isActive={currentPodcastId === podcast.id}
-            isPlaying={isPlaying && currentPodcastId === podcast.id}
-            onSelect={onSelectPodcast}
-            onDeleteRequest={handleDeleteRequest}
-            onToggleComplete={onTogglePodcastComplete}
-            onMoveRequest={onMovePodcastToCollection}
-            collections={collections}
-            isDeleting={deletingIds.has(podcast.id)}
-            onAnimationEnd={() => handleAnimationEnd(podcast.id)}
-            style={{ animationDelay: `${index * 30}ms` }}
-            progressOverride={currentPodcastId === podcast.id ? activePlayerTime : undefined}
-            useCollectionsView={useCollectionsView}
-          />
-        )
+        <PodcastItem
+          key={podcast.id}
+          podcast={podcast}
+          isActive={currentPodcastId === podcast.id}
+          isPlaying={isPlaying && currentPodcastId === podcast.id}
+          onSelect={onSelectPodcast}
+          onDeleteRequest={handleDeleteRequest}
+          onToggleComplete={onTogglePodcastComplete}
+          onMoveRequest={onMovePodcastToCollection}
+          collections={collections}
+          isDeleting={deletingIds.has(podcast.id)}
+          onAnimationEnd={() => handleAnimationEnd(podcast.id)}
+          style={{ animationDelay: `${index * 30}ms` }}
+          progressOverride={currentPodcastId === podcast.id ? activePlayerTime : undefined}
+          useCollectionsView={useCollectionsView}
+          playerLayout={playerLayout}
+        />
       ))}
     </div>
   );
