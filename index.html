@@ -30,7 +30,7 @@
       }
       [data-theme="minecraft"] {
         --font-sans: 'VT323', monospace;
-        --brand-bg: #5E3A1E; /* Dirt color for fallback */
+        --brand-bg: #70b5ff; /* Sky Blue */
         --brand-surface: #C6C6C6; /* Stone Grey UI panel */
         --brand-surface-light: #DDDDDD;
         --brand-primary: #55ACEE; /* Diamond Blue */
@@ -52,7 +52,7 @@
         --mc-progress-bar: #AAAAAA;
 
         cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAWCAYAAAAVLa4NAAAAAXNSR0IArs4c6QAAABxpVGlTCQ8AAAAADUlNSUgAAABVAAAAFoLe204AAABzSURBVDhPzZNbDoAgDER9W/yP5K8eKE1gC30Yh14WWpYlSz18gB/gZ2cYYwAP5WpUorisX/d1/sQDOHWeYcV2DjV2AY7e5AUkAVdAVoA2QBvYBSgDPgEnwAU4AlvAGrABboBfwCfwD7AE3gG3gD5gD5yBfcAX8AS+AY+Bf/8/wAmAInBGBg/5AAAAAElFTSuQmCC") 10 10, auto;
-        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAD9JREFUOE9jZKAQMOL5/38GBgYHBgYGEIZw//79/z/D/3//+c/w/8d/hv8+fmb47+M/w38f/xkGBgYAIN4f5d2kIYYAAAAASUVORK5CYII=');
+        background-image: none;
         image-rendering: pixelated;
       }
       [data-theme="brutalist"] {
@@ -185,7 +185,38 @@
         }
 
       /* Minecraft Theme Overrides */
-      [data-theme="minecraft"] body { font-size: 20px; }
+      [data-theme="minecraft"] body { 
+        font-size: 20px;
+        position: relative;
+        overflow-x: hidden;
+      }
+      [data-theme="minecraft"] body::before { /* Clouds */
+        content: '';
+        position: fixed;
+        top: 50px;
+        left: 0;
+        width: 4000px;
+        height: 218px;
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAB+AAAA2WCAYAAADfC3RkAAAAAXNSR0IArs4c6QAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAH4KADAAQAAAABAAANlgAAAACb856sAAAKwElEQVR4AYyDAQEAAAABBTgA/1JIAAABd2D4d7UAAP//T2FwcCBTYXJpZQB42mNgYGBgAGMwYhA5w2A0YPYgc4bBaMDsQeYMg9GA2YPMGYb9QCwO4tEAAAAACgAYAAQADgAOAAsAEgAWABoAGwAgACQAJQAnACgAKgArACwALgAyADMAMwA0ADYANwA5ADoAOwA8AD0APgA/AEAAQQBDAEQARgBIAEkASgBLAEwATQBOAE8AUABRAFIAUwBUAFUAVgBXAFgAWQBaAFsAXABdAF4AXwBgAGIAYwBkAGUAZgBnAGgAaQBoAGwAbgBvAHAAcQByAHMAdAB1AGoAdwB4AHkAegB7AHwAfQB+AH8AgACCAIQAhQCGAIgAigCMAI4AkACSAJQAlQCWgJoAnQCiAKQApgCnAKgAqgCsALMAtgC8gL6Av4DAgMGAxYDIgMmAzoDQgNKA04DUgNWA2oDcAAAAAAAAAAAAAQIAAwAEAAUABgAHAAgACQAΚAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AHgAfACAAIQAiACMAJAAlACYAJwAoACkAKgArACwALQAjAEUARwBHAEkASwBNAFEAUgBRAFIAUwBUAFUAVgBXAFgAWQBaAFsAXABdAF4AXwBgAGEAYgBjAGQAZQBmAGcAaABpAGoAawBsAG0AbgBvAHAAcQByAHMAdAB1AGoAdwB4AHkAegB7AHwAfQB+AH8AgACCAIMAhACFAAYAhwCIAIkAigCLAIwAjQCOAI8AkACRAJIAkwCUAJUAlgCXAIAAgwCFAIYAhwCJAIoAjACQAJIAAAAAAgADAAQABQAGAAYACQAΚAAsADAAOAA8AEQASABQAFgAXABgAGQAaABsAHQAdAB8AIAAiACMAJAAkACYAJwAoACkAKgAsAC0ALgAvADAAMgAyADQANQA2ADgAOAA6ADsAPAA9AD4APwBAAEIAQwBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAFEAUgBTAFQAVQBWAFcAWABZAFoAWwBcAF0AXgBfAGAAYQBiAGMAZABlAGYAZwBoAGkAagBrAGwAbQBuAG8AcABxAHIAcwB0AHUAdgB3AHgAeQB6AHsAfAB9AH4AfwCAAIIAgwCEAIUAhgCHAIgAiQCKAIwAjQCOAI8AkACRAJIAkwCUAJUAlgCXAIAAgwCFAIYAhwCJAIoAjACQAJIAkwCVAJaAmACdAKAApACmAKcAqACqAKwAsACyALMAtgC4ALoAvgDAAMCAwYDFgMiAycDPgNCA0oDTgNSA1YDXgNiA3IDhAAAAAAAAAAA=');
+        background-repeat: repeat-x;
+        z-index: -2;
+        animation: clouds 120s linear infinite;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+      [data-theme="minecraft"] body::after { /* Sun */
+        content: '';
+        position: fixed;
+        top: 50px;
+        left: 15%;
+        width: 80px;
+        height: 80px;
+        background: #ffd;
+        border-radius: 0;
+        box-shadow: 0 0 10px #ffd, 0 0 20px #ffd, 0 0 30px #ffd, 0 0 40px #ff0;
+        z-index: -3;
+        pointer-events: none;
+      }
       [data-theme="minecraft"] * { font-family: var(--font-sans); }
       [data-theme="minecraft"] h1, [data-theme="minecraft"] h2, [data-theme="minecraft"] h3, [data-theme="minecraft"] p, [data-theme="minecraft"] span:not(button span), [data-theme="minecraft"] div {
          text-shadow: var(--mc-text-shadow);
@@ -412,6 +443,10 @@
 
 
       /* Animations */
+      @keyframes clouds {
+        from { transform: translateX(0); }
+        to { transform: translateX(-2000px); }
+      }
       @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
@@ -568,8 +603,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
-
-
 
 </head>
   <body class="bg-brand-bg font-sans">
