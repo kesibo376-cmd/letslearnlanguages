@@ -85,7 +85,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
     const lessonName = podcast.name.replace(/preloaded audio/i, 'Lesson').toUpperCase();
     const isInProgress = progressToShow > 0 && !isCompleted;
     const defaultArtwork = theme === 'minecraft'
-      ? 'https://i.imgur.com/2V31G2G.png' // grass block
+      ? 'https://i.imgur.com/e3l9k04.png' // dirt block
       : 'https://i.imgur.com/Q3QfWqV.png'; // old default
 
     return (

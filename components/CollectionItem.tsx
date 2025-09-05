@@ -121,8 +121,8 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
         ) : theme === 'minecraft' ? (
           <div className="w-full h-full flex items-center justify-center bg-brand-surface-light">
             <img
-              src="https://i.imgur.com/2V31G2G.png"
-              alt="Minecraft grass block"
+              src="https://i.imgur.com/e3l9k04.png"
+              alt="Minecraft dirt block"
               className="w-full h-full object-cover"
             />
           </div>
