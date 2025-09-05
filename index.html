@@ -547,24 +547,30 @@
     }
     </script>
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.1.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
-    "react/": "https://aistudiocdn.com/react@^19.1.1/",
-    "uuid": "https://aistudiocdn.com/uuid@^11.1.0",
-    "firebase/app": "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.2.1/",
-    "idb": "https://aistudiocdn.com/idb@^8.0.3"
+    
+ <script type="importmap">
+  {
+    "imports": {
+      "react": "https://aistudiocdn.com/react@^19.1.1",
+      "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+      "react/": "https://aistudiocdn.com/react@^19.1.1/",
+      "uuid": "https://aistudiocdn.com/uuid@^11.1.0",
+      "firebase/app": "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js",
+      "firebase/": "https://aistudiocdn.com/firebase@^12.2.1/",
+      "idb": "https://aistudiocdn.com/idb@^8.0.3"
+    }
   }
-}
-</script>
+  </script>
+
+  <!-- Then your Firebase SDK scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+
+
+
 </head>
   <body class="bg-brand-bg font-sans">
     <svg width="0" height="0" style="position:absolute;z-index:-1">
