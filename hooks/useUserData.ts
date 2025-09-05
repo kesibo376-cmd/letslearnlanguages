@@ -1,7 +1,7 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, LayoutMode } from '../types';
 import { db } from '../firebase';
-import { doc, getDoc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 
 const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] = [
   { url: 'https://cheery-mooncake-49edfd.netlify.app/1.mp3', collectionName: 'JP Foundation' },
@@ -383,6 +383,7 @@ export const getDefaultData = () => ({
     hasCompletedOnboarding: false,
     customArtwork: null,
     playerLayout: 'pimsleur' as LayoutMode,
+    lastPlayedCollectionId: null,
 });
 
 
@@ -467,6 +468,7 @@ export function useUserData(userId?: string) {
     const hasCompletedOnboarding = loadedData.hasCompletedOnboarding;
     const customArtwork = loadedData.customArtwork;
     const playerLayout = loadedData.playerLayout;
+    const lastPlayedCollectionId = loadedData.lastPlayedCollectionId;
     
     const totalStorageUsed = useMemo(() => {
         if (podcasts) {
@@ -495,5 +497,6 @@ export function useUserData(userId?: string) {
         totalStorageUsed,
         customArtwork,
         playerLayout,
+        lastPlayedCollectionId,
     };
 }

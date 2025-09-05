@@ -58,6 +58,8 @@ interface AppUIProps {
     setPlayOnNavigate: (value: boolean) => void;
     playerLayout: LayoutMode;
     setPlayerLayout: (layout: LayoutMode) => void;
+    lastPlayedCollectionId: string | null;
+    setLastPlayedCollectionId: (id: string | null) => void;
     handleSetCustomArtwork: (url: string | null) => void;
     dataToExport: any;
     theme: Theme;
@@ -99,7 +101,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     setIsPlaying, setIsPlayerExpanded, updatePodcastProgress, handlePlaybackEnd, customArtwork, playbackRate,
     setPlaybackRate, activePlayerTime, setActivePlayerTime, isSettingsOpen, setIsSettingsOpen, hideCompleted,
     setHideCompleted, reviewModeEnabled, setReviewModeEnabled, completionSound, setCompletionSound, useCollectionsView,
-    setUseCollectionsView, playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, handleSetCustomArtwork, dataToExport, theme,
+    setUseCollectionsView, playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, lastPlayedCollectionId, setLastPlayedCollectionId, handleSetCustomArtwork, dataToExport, theme,
     setTheme, setStreakData, setPodcasts, setCollections, unrecordCompletion, recordCompletion,
     allPodcastsSorted, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
@@ -230,6 +232,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
   };
   
   const handlePlayCollection = (collectionId: string | null) => {
+     setLastPlayedCollectionId(collectionId);
      const podcastsInCollection = allPodcastsSorted.filter(p => p.collectionId === collectionId && !p.isListened);
      if (podcastsInCollection.length > 0) {
         startPlayback(podcastsInCollection[0].id);
@@ -407,6 +410,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                             onDeleteCollection={handleDeleteCollection}
                             onResetCollectionProgress={handleResetCollectionProgress}
                             onSetCollectionArtwork={handleSetCollectionArtwork}
+                            lastPlayedCollectionId={lastPlayedCollectionId}
                             theme={theme}
                           />
                       </div>

@@ -13,11 +13,12 @@ interface CollectionListProps {
   onDeleteCollection: (id: string) => void;
   onResetCollectionProgress: (collectionId: string | null) => void;
   onSetCollectionArtwork: (collectionId: string, url: string | null) => void;
+  lastPlayedCollectionId: string | null;
   theme: Theme;
 }
 
 const CollectionList: React.FC<CollectionListProps> = (props) => {
-  const { collections, podcasts, onNavigateToCollection, onPlayCollection, onRenameCollection, onDeleteCollection, onResetCollectionProgress, onSetCollectionArtwork, theme } = props;
+  const { collections, podcasts, onNavigateToCollection, onPlayCollection, onRenameCollection, onDeleteCollection, onResetCollectionProgress, onSetCollectionArtwork, theme, lastPlayedCollectionId } = props;
   
   const uncategorizedPodcasts = useMemo(() => {
     return podcasts.filter(p => p.collectionId === null);
@@ -44,8 +45,7 @@ const CollectionList: React.FC<CollectionListProps> = (props) => {
               podcastCount: stats.total,
               completionPercentage: stats.total > 0 ? (stats.listened / stats.total) * 100 : 0
           };
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
+      });
   }, [collections, podcasts]);
 
   const totalUncategorized = uncategorizedPodcasts.length;
@@ -56,11 +56,30 @@ const CollectionList: React.FC<CollectionListProps> = (props) => {
       podcastCount: uncategorizedPodcasts.length,
       completionPercentage: totalUncategorized > 0 ? (listenedUncategorized / totalUncategorized) * 100 : 0,
   };
+  
+  const allItems = useMemo(() => {
+      const unsortedItems = [...collectionsWithStats];
+      if (uncategorizedPodcasts.length > 0) {
+        unsortedItems.push(uncategorizedCollection);
+      }
 
-  const allItems = [...collectionsWithStats];
-  if (uncategorizedPodcasts.length > 0) {
-      allItems.push(uncategorizedCollection);
-  }
+      return unsortedItems.sort((a, b) => {
+          const aId = a.id === 'uncategorized' ? null : a.id;
+          const bId = b.id === 'uncategorized' ? null : b.id;
+
+          const isALastPlayed = aId === lastPlayedCollectionId;
+          const isBLastPlayed = bId === lastPlayedCollectionId;
+
+          if (isALastPlayed && !isBLastPlayed) return -1;
+          if (!isALastPlayed && isBLastPlayed) return 1;
+
+          if (a.id === 'uncategorized') return 1;
+          if (b.id === 'uncategorized') return -1;
+
+          return a.name.localeCompare(b.name);
+      });
+  }, [collectionsWithStats, uncategorizedPodcasts.length, lastPlayedCollectionId]);
+
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">

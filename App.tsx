@@ -48,6 +48,7 @@ export default function App() {
     totalStorageUsed,
     customArtwork,
     playerLayout,
+    lastPlayedCollectionId,
   } = useUserData(user?.uid);
 
   const [globalTheme, setGlobalTheme] = useTheme();
@@ -412,6 +413,8 @@ export default function App() {
         setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
         playerLayout={playerLayout}
         setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+        lastPlayedCollectionId={lastPlayedCollectionId}
+        setLastPlayedCollectionId={(id: string | null) => updateUserData({ lastPlayedCollectionId: id })}
         handleSetCustomArtwork={handleSetCustomArtwork}
         dataToExport={data}
         theme={theme}
