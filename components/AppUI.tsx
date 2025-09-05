@@ -400,6 +400,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                               if (playOnNavigate && firstUnplayed) {
                                   startPlayback(firstUnplayed.id);
                               }
+                              window.scrollTo(0, 0);
                             }}
                             onPlayCollection={handlePlayCollection}
                             onRenameCollection={handleRenameCollection}
