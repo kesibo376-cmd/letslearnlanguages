@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode } from '../types';
+import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode, Language } from '../types';
 import { formatBytes } from '../lib/utils';
 import ToggleSwitch from './ToggleSwitch';
 import ImageIcon from './icons/ImageIcon';
@@ -12,6 +12,7 @@ import UserIcon from './icons/UserIcon';
 import PaintBrushIcon from './icons/PaintBrushIcon';
 import SparklesIcon from './icons/SparklesIcon';
 import WarningIcon from './icons/WarningIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface SettingsModalProps {
   onOpenClearDataModal: () => void;
   currentTheme: Theme;
   onSetTheme: (theme: Theme) => void;
+  onSetLanguage: (language: Language) => void;
   streakData: StreakData;
   onSetStreakData: (data: StreakData) => void;
   hideCompleted: boolean;
@@ -53,10 +55,10 @@ const THEMES: { id: Theme; name: string }[] = [
 ];
 
 const DIFFICULTIES: { id: StreakDifficulty, name: string, description: string }[] = [
-    { id: 'easy', name: 'Easy', description: 'Listen to any audio.' },
-    { id: 'normal', name: 'Normal', description: 'Complete 1 audio.' },
-    { id: 'hard', name: 'Hard', description: 'Complete 2 audio files.' },
-    { id: 'extreme', name: 'Extreme', description: 'Complete 3 audio files.' },
+    { id: 'easy', name: 'settings.features.difficultyEasy', description: 'settings.features.difficultyEasySub' },
+    { id: 'normal', name: 'settings.features.difficultyNormal', description: 'settings.features.difficultyNormalSub' },
+    { id: 'hard', name: 'settings.features.difficultyHard', description: 'settings.features.difficultyHardSub' },
+    { id: 'extreme', name: 'settings.features.difficultyExtreme', description: 'settings.features.difficultyExtremeSub' },
 ];
 
 const SOUNDS: { id: CompletionSound; name: string }[] = [
@@ -67,24 +69,25 @@ const SOUNDS: { id: CompletionSound; name: string }[] = [
   { id: 'runescape', name: 'RuneScape' },
 ];
 
-const CATEGORIES = [
-  { id: 'account', label: 'Account', icon: UserIcon },
-  { id: 'appearance', label: 'Appearance', icon: PaintBrushIcon },
-  { id: 'features', label: 'Features', icon: SparklesIcon },
-  { id: 'data', label: 'Data Management', icon: DatabaseIcon },
-  { id: 'danger', label: 'Danger Zone', icon: WarningIcon, isDanger: true },
-];
-
-
 const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   const {
-    isOpen, onClose, onResetProgress, onOpenClearDataModal, currentTheme, onSetTheme,
+    isOpen, onClose, onResetProgress, onOpenClearDataModal, currentTheme, onSetTheme, onSetLanguage,
     streakData, onSetStreakData, hideCompleted, onSetHideCompleted, reviewModeEnabled,
     onSetReviewModeEnabled, customArtwork, onSetCustomArtwork, onExportData,
     onImportData, completionSound, onSetCompletionSound, useCollectionsView,
     onSetUseCollectionsView, playOnNavigate, onSetPlayOnNavigate, totalStorageUsed,
     user, onLogout, playerLayout, onSetPlayerLayout
   } = props;
+
+  const { t, language } = useTranslation();
+  
+  const CATEGORIES = [
+    { id: 'account', label: t('settings.categories.account'), icon: UserIcon },
+    { id: 'appearance', label: t('settings.categories.appearance'), icon: PaintBrushIcon },
+    { id: 'features', label: t('settings.categories.features'), icon: SparklesIcon },
+    { id: 'data', label: t('settings.categories.data'), icon: DatabaseIcon },
+    { id: 'danger', label: t('settings.categories.danger'), icon: WarningIcon, isDanger: true },
+  ];
 
   const [activeCategory, setActiveCategory] = useState('account');
   const importInputRef = React.useRef<HTMLInputElement>(null);
@@ -98,7 +101,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   }, [isOpen, customArtwork]);
 
   const handleResetClick = () => {
-    if (window.confirm('Are you sure you want to reset all audio progress? This action cannot be undone.')) {
+    if (window.confirm(t('settings.danger.confirmReset'))) {
         onResetProgress();
         onClose();
     }
@@ -140,14 +143,14 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   // Section Components for Readability
   const AccountSection = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">Account</h3>
+      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">{t('settings.categories.account')}</h3>
       <div className="p-3 bg-brand-surface-light rounded-md b-border flex items-center justify-between gap-4">
         <p className="text-sm text-brand-text-secondary truncate">
-          Logged in as <strong className="text-brand-text">{user?.email}</strong>
+          {t('settings.account.loggedInAs')} <strong className="text-brand-text">{user?.email}</strong>
         </p>
         <button onClick={onLogout} className="flex-shrink-0 flex items-center gap-2 text-sm text-center px-3 py-2 bg-brand-surface hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border">
           <LogOutIcon size={16} />
-          Logout
+          {t('settings.account.logout')}
         </button>
       </div>
     </div>
@@ -155,9 +158,20 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   
   const AppearanceSection = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">Appearance</h3>
+      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">{t('settings.categories.appearance')}</h3>
       <div>
-        <label className="block text-sm font-medium text-brand-text-secondary mb-2">Theme</label>
+        <label className="block text-sm font-medium text-brand-text-secondary mb-2">{t('settings.appearance.language')}</label>
+        <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => onSetLanguage('en')} className={`w-full text-center p-2 text-sm rounded-md transition-colors duration-200 b-border ${language === 'en' ? 'active' : 'bg-brand-surface-light hover:bg-opacity-75'}`}>
+                {t('settings.appearance.english')}
+            </button>
+            <button onClick={() => onSetLanguage('zh')} className={`w-full text-center p-2 text-sm rounded-md transition-colors duration-200 b-border ${language === 'zh' ? 'active' : 'bg-brand-surface-light hover:bg-opacity-75'}`}>
+                {t('settings.appearance.chinese')}
+            </button>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-brand-text-secondary mb-2">{t('settings.appearance.theme')}</label>
         <div className="grid grid-cols-2 gap-2">
           {THEMES.map(theme => (
             <button key={theme.id} onClick={() => onSetTheme(theme.id)} className={`w-full text-center p-2 text-sm rounded-md transition-colors duration-200 b-border ${currentTheme === theme.id ? 'active' : 'bg-brand-surface-light hover:bg-opacity-75'}`}>
@@ -167,7 +181,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
         </div>
       </div>
       <div>
-        <label htmlFor="artwork-url-input" className="block text-sm font-medium text-brand-text-secondary mb-2">Player Artwork URL</label>
+        <label htmlFor="artwork-url-input" className="block text-sm font-medium text-brand-text-secondary mb-2">{t('settings.appearance.artworkUrl')}</label>
         <div className="p-3 bg-brand-surface-light rounded-md b-border flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <div className="w-16 h-16 bg-brand-surface rounded-md b-border flex-shrink-0 flex items-center justify-center overflow-hidden">
@@ -183,8 +197,8 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             />
           </div>
           <div className="flex gap-2 justify-end">
-            {customArtwork && <button onClick={handleArtworkRemove} className="text-sm px-3 py-1.5 bg-brand-surface hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border text-red-500">Remove</button>}
-            <button onClick={handleArtworkSave} className="text-sm px-4 py-1.5 bg-brand-primary text-brand-text-on-primary hover:bg-brand-primary-hover rounded-md transition-colors duration-200 b-border">Save</button>
+            {customArtwork && <button onClick={handleArtworkRemove} className="text-sm px-3 py-1.5 bg-brand-surface hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border text-red-500">{t('settings.appearance.remove')}</button>}
+            <button onClick={handleArtworkSave} className="text-sm px-4 py-1.5 bg-brand-primary text-brand-text-on-primary hover:bg-brand-primary-hover rounded-md transition-colors duration-200 b-border">{t('settings.appearance.save')}</button>
           </div>
         </div>
       </div>
@@ -193,49 +207,49 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
   const FeaturesSection = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">Features</h3>
+      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">{t('settings.categories.features')}</h3>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-        <div><p className="font-semibold">Organize with Collections</p><p className="text-sm text-brand-text-secondary">Group audio files into folders.</p></div>
+        <div><p className="font-semibold">{t('settings.features.collections')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.collectionsSub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
             <ToggleSwitch isOn={useCollectionsView} handleToggle={() => onSetUseCollectionsView(!useCollectionsView)} />
         </div>
       </div>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-        <div><p className="font-semibold">Enable Streak</p><p className="text-sm text-brand-text-secondary">Track your daily listening activity.</p></div>
+        <div><p className="font-semibold">{t('settings.features.streak')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.streakSub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
             <ToggleSwitch isOn={streakData.enabled} handleToggle={handleStreakToggle} />
         </div>
       </div>
       <div className={`p-3 bg-brand-surface-light rounded-md b-border transition-opacity ${!streakData.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
-        <p className="font-semibold mb-2">Streak Difficulty</p>
+        <p className="font-semibold mb-2">{t('settings.features.streakDifficulty')}</p>
         <div className="flex flex-col space-y-2 streak-difficulty-options">
           {DIFFICULTIES.map(d => (
             <button key={d.id} onClick={() => handleDifficultyChange(d.id)} disabled={!streakData.enabled} className={`w-full text-left px-2 py-3 rounded-md transition-colors duration-200 flex items-center justify-between text-sm b-border ${streakData.difficulty === d.id ? 'active' : 'bg-brand-surface hover:bg-opacity-75'}`}>
-                <div><span className="font-semibold">{d.name}</span><span className="text-xs ml-2 opacity-80">{d.description}</span></div>
+                <div><span className="font-semibold">{t(d.name)}</span><span className="text-xs ml-2 opacity-80">{t(d.description)}</span></div>
             </button>
           ))}
         </div>
       </div>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-        <div><p className="font-semibold">Review Mode</p><p className="text-sm text-brand-text-secondary">Prompt to review previous lesson.</p></div>
+        <div><p className="font-semibold">{t('settings.features.review')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.reviewSub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
             <ToggleSwitch isOn={reviewModeEnabled} handleToggle={() => onSetReviewModeEnabled(!reviewModeEnabled)} />
         </div>
       </div>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-        <div><p className="font-semibold">Auto-play Collection</p><p className="text-sm text-brand-text-secondary">Start playing when opening a collection.</p></div>
+        <div><p className="font-semibold">{t('settings.features.autoplay')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.autoplaySub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
             <ToggleSwitch isOn={playOnNavigate} handleToggle={() => onSetPlayOnNavigate(!playOnNavigate)} />
         </div>
       </div>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-        <div><p className="font-semibold">Hide Completed</p><p className="text-sm text-brand-text-secondary">Remove listened items from the list.</p></div>
+        <div><p className="font-semibold">{t('settings.features.hideCompleted')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.hideCompletedSub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
             <ToggleSwitch isOn={hideCompleted} handleToggle={() => onSetHideCompleted(!hideCompleted)} />
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-brand-text-secondary mb-2">Completion Sound</label>
+        <label className="block text-sm font-medium text-brand-text-secondary mb-2">{t('settings.features.completionSound')}</label>
         <select value={completionSound} onChange={(e) => onSetCompletionSound(e.target.value as CompletionSound)} className="w-full p-2 bg-brand-surface-light rounded-md b-border text-brand-text">
             {SOUNDS.map(sound => <option key={sound.id} value={sound.id}>{sound.name}</option>)}
         </select>
@@ -245,31 +259,31 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
   const DataSection = () => (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">Data Management</h3>
+      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">{t('settings.data.title')}</h3>
       <div className="p-3 bg-brand-surface-light rounded-md b-border flex items-center gap-3">
         <DatabaseIcon size={24} className="text-brand-text-secondary flex-shrink-0"/>
-        <div><p className="font-semibold">Audio Storage</p><p className="text-sm text-brand-text-secondary">Total space used by saved audio: <span className="font-bold text-brand-text">{formatBytes(totalStorageUsed)}</span></p></div>
+        <div><p className="font-semibold">{t('settings.data.storage')}</p><p className="text-sm text-brand-text-secondary">{t('settings.data.storageSub', { size: formatBytes(totalStorageUsed) })}</p></div>
       </div>
       <button onClick={onExportData} className="w-full text-left p-3 bg-brand-surface-light hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border flex items-center gap-3">
         <DownloadIcon size={20} className="text-brand-text-secondary flex-shrink-0"/>
-        <div><p className="font-semibold">Export Settings</p><p className="text-sm text-brand-text-secondary">Save your settings to a JSON file.</p></div>
+        <div><p className="font-semibold">{t('settings.data.export')}</p><p className="text-sm text-brand-text-secondary">{t('settings.data.exportSub')}</p></div>
       </button>
       <input type="file" accept=".json" ref={importInputRef} onChange={handleImportFileChange} className="hidden" aria-label="Import progress file" />
       <button onClick={() => importInputRef.current?.click()} className="w-full text-left p-3 bg-brand-surface-light hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border flex items-center gap-3">
         <UploadIcon size={20} className="text-brand-text-secondary flex-shrink-0"/>
-        <div><p className="font-semibold">Import Settings</p><p className="text-sm text-brand-text-secondary">Load settings from a JSON file.</p></div>
+        <div><p className="font-semibold">{t('settings.data.import')}</p><p className="text-sm text-brand-text-secondary">{t('settings.data.importSub')}</p></div>
       </button>
     </div>
   );
   
   const DangerSection = () => (
     <div className="space-y-4 p-4 rounded-lg border-2 border-red-500/50">
-      <h3 className="text-lg font-semibold text-red-500">Danger Zone</h3>
+      <h3 className="text-lg font-semibold text-red-500">{t('settings.danger.title')}</h3>
       <button onClick={handleResetClick} className="w-full text-left p-3 bg-red-500/10 hover:bg-red-500/20 rounded-md transition-colors duration-200 b-border border-red-500/20">
-        <p className="font-semibold text-red-500">Reset All Progress</p><p className="text-sm text-red-500/80">Mark all audio files as unplayed.</p>
+        <p className="font-semibold text-red-500">{t('settings.danger.reset')}</p><p className="text-sm text-red-500/80">{t('settings.danger.resetSub')}</p>
       </button>
       <button onClick={onOpenClearDataModal} className="w-full text-left p-3 bg-red-500/10 hover:bg-red-500/20 rounded-md transition-colors duration-200 b-border border-red-500/20">
-        <p className="font-semibold text-red-500">Delete Audio & Data</p><p className="text-sm text-red-500/80">Permanently remove audio files and data.</p>
+        <p className="font-semibold text-red-500">{t('settings.danger.delete')}</p><p className="text-sm text-red-500/80">{t('settings.danger.deleteSub')}</p>
       </button>
     </div>
   );
@@ -299,7 +313,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 id="settings-title" className="text-xl font-bold text-brand-text">Settings</h2>
+          <h2 id="settings-title" className="text-xl font-bold text-brand-text">{t('settings.title')}</h2>
           <button onClick={onClose} aria-label="Close settings" className="text-brand-text-secondary hover:text-brand-text text-3xl leading-none">&times;</button>
         </div>
         

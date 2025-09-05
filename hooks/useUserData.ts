@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Podcast, Collection, Theme, StreakData, CompletionSound, LayoutMode } from '../types';
+import type { Podcast, Collection, Theme, StreakData, CompletionSound, LayoutMode, Language } from '../types';
 import { db } from '../firebase';
 
 const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] = [
@@ -384,6 +384,7 @@ export const getDefaultData = () => ({
     customArtwork: null,
     playerLayout: 'pimsleur' as LayoutMode,
     lastPlayedCollectionId: null,
+    language: 'en' as Language,
 });
 
 
@@ -469,6 +470,7 @@ export function useUserData(userId?: string) {
     const customArtwork = loadedData.customArtwork;
     const playerLayout = loadedData.playerLayout;
     const lastPlayedCollectionId = loadedData.lastPlayedCollectionId;
+    const language = loadedData.language;
     
     const totalStorageUsed = useMemo(() => {
         if (podcasts) {
@@ -498,5 +500,6 @@ export function useUserData(userId?: string) {
         customArtwork,
         playerLayout,
         lastPlayedCollectionId,
+        language,
     };
 }

@@ -3,16 +3,17 @@ import React from 'react';
 import type { StreakData } from '../types';
 import FlowerOuiIcon from './icons/FlowerOuiIcon';
 import FlowerNonIcon from './icons/FlowerNonIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface StreakTrackerProps {
   streakData: StreakData;
   isTodayComplete: boolean;
 }
 
-const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
 const StreakTracker: React.FC<StreakTrackerProps> = ({ streakData, isTodayComplete }) => {
   const { currentStreak, history } = streakData;
+  const { t } = useTranslation();
+  const DAY_LABELS = t('streak.days').split(',');
 
   const now = new Date();
 
@@ -51,7 +52,7 @@ const StreakTracker: React.FC<StreakTrackerProps> = ({ streakData, isTodayComple
         </div>
         <div>
             <span className="font-bold text-4xl leading-none">{currentStreak}</span>
-            <p className="text-brand-text-secondary text-sm">Day Streak</p>
+            <p className="text-brand-text-secondary text-sm">{t('streak.dayStreak')}</p>
         </div>
       </div>
       

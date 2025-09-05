@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import FileUpload from './FileUpload';
 import SettingsIcon from './icons/SettingsIcon';
 import EditIcon from './icons/EditIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface HeaderProps {
   title: string;
@@ -15,6 +16,7 @@ const Header: React.FC<HeaderProps> = ({ title, onSetTitle, onFileUpload, onOpen
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(title);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setInputValue(title);
@@ -60,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({ title, onSetTitle, onFileUpload, onOpen
           />
         ) : (
           <h1 className="text-3xl font-bold text-brand-text cursor-pointer truncate" onClick={() => setIsEditing(true)}>
-            {title}
+            {title === 'My Audio Library' ? t('settings.data.storageSub', { size: '' }).split(':')[0] : title}
           </h1>
         )}
         <button onClick={() => setIsEditing(true)} className="text-brand-text-secondary hover:text-brand-text p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">

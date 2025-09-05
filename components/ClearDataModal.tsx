@@ -1,6 +1,7 @@
 
 import React from 'react';
 import TrashIcon from './icons/TrashIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface ClearDataModalProps {
   isOpen: boolean;
@@ -11,28 +12,29 @@ interface ClearDataModalProps {
 }
 
 const ClearDataModal: React.FC<ClearDataModalProps> = ({ isOpen, onClose, onClearLocal, onResetPreloaded, onClearAll }) => {
+  const { t } = useTranslation();
   
   const handleClearLocalClick = () => {
-    if (window.confirm('Are you sure you want to delete all locally uploaded audio files? This action cannot be undone.')) {
+    if (window.confirm(t('clearData.confirmLocal'))) {
         onClearLocal();
     }
   };
   
   const handleResetPreloadedClick = () => {
-    if (window.confirm('Are you sure you want to reset all progress for preloaded content?')) {
+    if (window.confirm(t('clearData.confirmPreloaded'))) {
         onResetPreloaded();
     }
   };
   
   const handleClearAllClick = () => {
-    if (window.confirm('Are you sure you want to delete ALL data, including local files and all progress? This action cannot be undone.')) {
+    if (window.confirm(t('clearData.confirmAll'))) {
         onClearAll();
     }
   };
 
   return (
     <div 
-      className={`fixed inset-0 bg-black z-50 flex items-center justify-center p-4 transition-all duration-300 ease-in-out ${isOpen ? 'bg-opacity-75 backdrop-blur-sm' : 'bg-opacity-0 pointer-events-none'}`}
+      className={`fixed inset-0 bg-black z-50 flex items-center justify-center p-4 transition-opacity duration-300 ease-in-out ${isOpen ? 'bg-opacity-75 backdrop-blur-sm' : 'bg-opacity-0 pointer-events-none'}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -44,11 +46,11 @@ const ClearDataModal: React.FC<ClearDataModalProps> = ({ isOpen, onClose, onClea
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-            <h2 id="clear-data-title" className="text-xl font-bold text-brand-text">Clear Data Options</h2>
+            <h2 id="clear-data-title" className="text-xl font-bold text-brand-text">{t('clearData.title')}</h2>
             <button onClick={onClose} aria-label="Close" className="text-brand-text-secondary hover:text-brand-text text-3xl leading-none">&times;</button>
         </div>
         <p className="text-brand-text-secondary mb-6">
-            Choose what data you would like to clear. These actions cannot be undone.
+            {t('clearData.prompt')}
         </p>
 
         <div className="space-y-3">
@@ -58,8 +60,8 @@ const ClearDataModal: React.FC<ClearDataModalProps> = ({ isOpen, onClose, onClea
             >
                 <TrashIcon size={24} className="text-red-500 flex-shrink-0"/>
                 <div>
-                  <p className="font-semibold text-brand-text">Clear Local Files</p>
-                  <p className="text-sm text-brand-text-secondary">Delete all audio files you have uploaded.</p>
+                  <p className="font-semibold text-brand-text">{t('clearData.clearLocal')}</p>
+                  <p className="text-sm text-brand-text-secondary">{t('clearData.clearLocalSub')}</p>
                 </div>
             </button>
             <button 
@@ -68,8 +70,8 @@ const ClearDataModal: React.FC<ClearDataModalProps> = ({ isOpen, onClose, onClea
             >
                 <TrashIcon size={24} className="text-yellow-500 flex-shrink-0"/>
                 <div>
-                  <p className="font-semibold text-brand-text">Reset Preloaded Content</p>
-                  <p className="text-sm text-brand-text-secondary">Reset progress for all built-in audio.</p>
+                  <p className="font-semibold text-brand-text">{t('clearData.resetPreloaded')}</p>
+                  <p className="text-sm text-brand-text-secondary">{t('clearData.resetPreloadedSub')}</p>
                 </div>
             </button>
              <button 
@@ -78,8 +80,8 @@ const ClearDataModal: React.FC<ClearDataModalProps> = ({ isOpen, onClose, onClea
             >
                 <TrashIcon size={24} className="text-red-500 flex-shrink-0"/>
                 <div>
-                  <p className="font-semibold text-red-500">Clear Everything</p>
-                  <p className="text-sm text-red-500/80">Delete all local files and reset all progress.</p>
+                  <p className="font-semibold text-red-500">{t('clearData.clearAll')}</p>
+                  <p className="text-sm text-red-500/80">{t('clearData.clearAllSub')}</p>
                 </div>
             </button>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface StatusBarProps {
   listenedCount: number;
@@ -7,11 +8,12 @@ interface StatusBarProps {
 }
 
 const StatusBar: React.FC<StatusBarProps> = ({ listenedCount, totalCount, percentage }) => {
+  const { t } = useTranslation();
   return (
     <div className="mt-4">
       <div className="flex justify-between items-center text-sm text-brand-text-secondary mb-1">
-        <span className="font-semibold text-brand-text">{Math.round(percentage)}% Complete</span>
-        <span>{listenedCount} of {totalCount} listened</span>
+        <span className="font-semibold text-brand-text">{t('statusBar.complete', { percentage: Math.round(percentage) })}</span>
+        <span>{t('statusBar.listened', { listenedCount, totalCount })}</span>
       </div>
       <div 
         className="w-full bg-brand-surface rounded-full h-2 b-border"

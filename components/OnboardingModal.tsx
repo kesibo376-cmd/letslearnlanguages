@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import UploadIcon from './icons/UploadIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onImportData,
 }) => {
   const importInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -36,8 +38,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
         className={`modal-panel onboarding bg-brand-surface rounded-lg shadow-2xl w-full max-w-sm b-shadow b-border transition-all duration-500 ease-in-out ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
       >
         <div className="onboarding-header p-6 pb-4 text-center">
-          <h2 id="onboarding-title" className="text-2xl font-bold text-brand-text">Welcome!</h2>
-          <p className="text-brand-text-secondary mt-1">Are you new here or restoring from a backup?</p>
+          <h2 id="onboarding-title" className="text-2xl font-bold text-brand-text">{t('onboarding.welcome')}</h2>
+          <p className="text-brand-text-secondary mt-1">{t('onboarding.prompt')}</p>
         </div>
         
         <div className="onboarding-content p-6 pt-2">
@@ -46,8 +48,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 onClick={onComplete}
                 className="w-full text-center p-4 rounded-md transition-colors duration-200 b-border bg-brand-primary text-brand-text-on-primary hover:bg-brand-primary-hover b-shadow b-shadow-hover"
             >
-                <span className="font-semibold">Start Fresh</span>
-                <p className="text-sm opacity-80 mt-1">Begin with a clean slate.</p>
+                <span className="font-semibold">{t('onboarding.startFresh')}</span>
+                <p className="text-sm opacity-80 mt-1">{t('onboarding.startFreshSub')}</p>
             </button>
              <input
                 type="file"
@@ -63,9 +65,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
             >
                 <span className="font-semibold inline-flex items-center gap-2">
                   <UploadIcon size={16}/>
-                  Import from File
+                  {t('onboarding.import')}
                 </span>
-                <p className="text-sm text-brand-text-secondary mt-1">Load your progress and settings.</p>
+                <p className="text-sm text-brand-text-secondary mt-1">{t('onboarding.importSub')}</p>
             </button>
           </div>
         </div>

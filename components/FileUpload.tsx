@@ -1,6 +1,7 @@
 
 import React, { useRef } from 'react';
 import PlusIcon from './icons/PlusIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface FileUploadProps {
   onFileUpload: (files: FileList) => void;
@@ -10,6 +11,7 @@ interface FileUploadProps {
 
 const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading, compact = false }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -48,12 +50,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading, compac
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            {!compact && <span className="hidden sm:inline ml-3">Processing...</span>}
+            {!compact && <span className="hidden sm:inline ml-3">{t('header.processing')}</span>}
           </>
         ) : (
           <>
             <PlusIcon size={20} />
-            {!compact && <span className="hidden sm:inline ml-2 font-bold">Add Audio</span>}
+            {!compact && <span className="hidden sm:inline ml-2 font-bold">{t('header.addAudio')}</span>}
           </>
         )}
       </button>

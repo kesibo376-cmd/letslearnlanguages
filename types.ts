@@ -40,3 +40,5 @@ export interface User {
 
 // Fix: Export LayoutMode type for player component
 export type LayoutMode = 'default' | 'pimsleur';
+
+export type Language = 'en' | 'zh';
