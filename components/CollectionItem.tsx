@@ -167,7 +167,7 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
                         <ThreeDotsIcon size={20} />
                     </button>
                     {isMenuOpen && (
-                         <div className="absolute right-0 top-full mt-2 w-56 bg-brand-surface-light rounded-md shadow-lg z-20 b-border animate-scale-in origin-top-right">
+                         <div className="absolute right-0 top-full mt-2 w-56 bg-brand-surface-light rounded-md shadow-lg z-50 b-border animate-scale-in origin-top-right">
                             <ul className="py-1">
                                 <li><button onClick={(e) => handleAction(e, handleRename)} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center gap-3"><EditIcon size={16}/> Rename Collection</button></li>
                                 <li><button onClick={(e) => handleAction(e, handleSetArtwork)} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center gap-3"><ImageIcon size={16}/> Set Artwork</button></li>
