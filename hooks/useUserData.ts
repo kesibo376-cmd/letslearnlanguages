@@ -373,7 +373,7 @@ export const getDefaultData = () => ({
         .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
         .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i),
     title: 'My Audio Library',
-    theme: 'charcoal' as Theme,
+    theme: 'brutalist' as Theme,
     streakData: DEFAULT_STREAK_DATA,
     hideCompleted: false,
     reviewModeEnabled: false,

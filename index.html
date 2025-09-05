@@ -2,15 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-   <link rel="icon" type="image/png" href="/components/icons/abstract.png">
-    <link rel="apple-touch-icon" href="/components/icons/abstract.png">
+    <link rel="icon" type="image/png" href="components/icons/abstract.png">
+    <link rel="apple-touch-icon" href="Components/icons/abstract.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bokesi's App</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lora:ital@0;1&family=Source+Sans+Pro:wght@400;600;700&family=VT323&family=Press+Start+2P&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
     <style>
-      :root, [data-theme="charcoal"] {
+      :root, [data-theme="brutalist"] {
+        --font-sans: 'Courier New', monospace;
+        --brand-bg: #F0F0F0; /* Light Elegant Gray */
+        --brand-surface: #F0F0F0;
+        --brand-surface-light: #E0E0E0; /* Slightly darker gray */
+        --brand-primary: #0000FF; /* Bright Blue */
+        --brand-primary-hover: #0000CC;
+        --brand-text: #000000;
+        --brand-text-secondary: #555555;
+        --brand-text-on-primary: #F0F0F0;
+        --brand-border-color: #000000;
+        --brand-gradient-start: #0000FF20;
+        --brand-gradient-end: #F0F0F0;
+      }
+      [data-theme="charcoal"] {
         --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
         --brand-bg: #121212;
         --brand-surface: #1e1e1e;
@@ -54,20 +68,6 @@
         cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAWCAYAAAAVLa4NAAAAAXNSR0IArs4c6QAAABxpVGlTCQ8AAAAADUlNSUgAAABVAAAAFoLe204AAABzSURBVDhPzZNbDoAgDER9W/yP5K8eKE1gC30Yh14WWpYlSz18gB/gZ2cYYwAP5WpUorisX/d1/sQDOHWeYcV2DjV2AY7e5AUkAVdAVoA2QBvYBSgDPgEnwAU4AlvAGrABboBfwCfwD7AE3gG3gD5gD5yBfcAX8AS+AY+Bf/8/wAmAInBGBg/5AAAAAElFTSuQmCC") 10 10, auto;
         background-image: none;
         image-rendering: pixelated;
-      }
-      [data-theme="brutalist"] {
-        --font-sans: 'Courier New', monospace;
-        --brand-bg: #F0F0F0; /* Light Elegant Gray */
-        --brand-surface: #F0F0F0;
-        --brand-surface-light: #E0E0E0; /* Slightly darker gray */
-        --brand-primary: #0000FF; /* Bright Blue */
-        --brand-primary-hover: #0000CC;
-        --brand-text: #000000;
-        --brand-text-secondary: #555555;
-        --brand-text-on-primary: #F0F0F0;
-        --brand-border-color: #000000;
-        --brand-gradient-start: #0000FF20;
-        --brand-gradient-end: #F0F0F0;
       }
       [data-theme="retro-web"] {
         --font-sans: 'Press Start 2P', monospace;

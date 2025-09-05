@@ -8,6 +8,7 @@ import CheckIcon from './icons/CheckIcon';
 import ThreeDotsIcon from './icons/ThreeDotsIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import BookOpenIcon from './icons/BookOpenIcon';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface PodcastItemProps {
   podcast: Podcast;
@@ -49,6 +50,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMoveMenuOpen, setIsMoveMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
   
   const isCompleted = podcast.isListened;
   const progressToShow = progressOverride !== undefined ? progressOverride : podcast.progress;
@@ -82,7 +84,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
   }
 
   if (playerLayout === 'pimsleur' && useCollectionsView) {
-    const lessonName = podcast.name.replace(/preloaded audio/i, 'Lesson').toUpperCase();
+    const lessonName = podcast.name.replace(/preloaded audio/i, t('podcast.lesson')).toUpperCase();
     const isInProgress = progressToShow > 0 && !isCompleted;
     const defaultArtwork = theme === 'minecraft'
       ? 'https://i.imgur.com/e3l9k04.png' // dirt block
@@ -135,7 +137,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
                 <h3 className="font-bold text-sm truncate" title={lessonName}>{lessonName}</h3>
                 {isInProgress && (
                   <span className="text-xs text-gray-600 bg-gray-100 border border-gray-300 mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full">
-                    <PlayIcon size={10} /> In Progress
+                    <PlayIcon size={10} /> {t('podcast.inProgress')}
                   </span>
                 )}
             </div>
@@ -149,23 +151,23 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
                   <ul className="py-1">
                       <li>
                           <button onClick={(e) => handleAction(e, () => onToggleComplete(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            {isCompleted ? 'Unmark as completed' : 'Mark as completed'}
+                            {isCompleted ? t('podcast.unmarkCompleted') : t('podcast.markCompleted')}
                           </button>
                       </li>
                       <li className="relative">
                         <button onClick={(e) => { e.stopPropagation(); setIsMoveMenuOpen(prev => !prev); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex justify-between items-center">
-                          Move to... <ChevronRightIcon size={16} className={`${isMoveMenuOpen ? 'rotate-90' : ''} transition-transform`}/>
+                          {t('podcast.moveTo')} <ChevronRightIcon size={16} className={`${isMoveMenuOpen ? 'rotate-90' : ''} transition-transform`}/>
                         </button>
                         {isMoveMenuOpen && (
                             <div className="absolute right-full top-0 mr-1 w-48 bg-white rounded-md shadow-lg border border-gray-200">
                                 <ul className="py-1 max-h-48 overflow-y-auto">
-                                    <li><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, null))} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled={podcast.collectionId === null}>Uncategorized</button></li>
+                                    <li><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, null))} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled={podcast.collectionId === null}>{t('podcast.uncategorized')}</button></li>
                                     {collections.map(c => (<li key={c.id}><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, c.id))} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled={podcast.collectionId === c.id}>{c.name}</button></li>))}
                                 </ul>
                             </div>
                         )}
                       </li>
-                      <li><button onClick={(e) => handleAction(e, () => onDeleteRequest(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button></li>
+                      <li><button onClick={(e) => handleAction(e, () => onDeleteRequest(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">{t('podcast.delete')}</button></li>
                   </ul>
                 </div>
               )}
@@ -232,7 +234,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
                             onClick={(e) => handleAction(e, () => onToggleComplete(podcast.id))}
                             className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface"
                           >
-                            {isCompleted ? 'Unmark as completed' : 'Mark as completed'}
+                            {isCompleted ? t('podcast.unmarkCompleted') : t('podcast.markCompleted')}
                           </button>
                       </li>
                       {useCollectionsView && (
@@ -241,7 +243,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
                             onClick={(e) => { e.stopPropagation(); setIsMoveMenuOpen(prev => !prev); }}
                             className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex justify-between items-center"
                           >
-                            Move to... <ChevronRightIcon size={16} className={`${isMoveMenuOpen ? 'rotate-180' : ''} transition-transform`}/>
+                            {t('podcast.moveTo')} <ChevronRightIcon size={16} className={`${isMoveMenuOpen ? 'rotate-180' : ''} transition-transform`}/>
                           </button>
                           {isMoveMenuOpen && (
                               <div className="absolute right-full top-0 mr-1 w-48 bg-brand-surface-light rounded-md shadow-lg b-border">
@@ -252,7 +254,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
                                           className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface disabled:opacity-50"
                                           disabled={podcast.collectionId === null}
                                         >
-                                          Uncategorized
+                                          {t('podcast.uncategorized')}
                                         </button>
                                       </li>
                                       {collections.map(c => (
@@ -276,7 +278,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
                             onClick={(e) => handleAction(e, () => onDeleteRequest(podcast.id))}
                             className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-brand-surface"
                           >
-                            Delete
+                            {t('podcast.delete')}
                           </button>
                       </li>
                   </ul>

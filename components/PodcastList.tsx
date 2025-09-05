@@ -2,6 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import type { Podcast, Collection, LayoutMode, Theme } from '../types';
 import PodcastItem from './PodcastItem';
+import { useTranslation } from '../contexts/LanguageContext';
 
 interface PodcastListProps {
   podcasts: Podcast[];
@@ -24,6 +25,7 @@ const PodcastList: React.FC<PodcastListProps> = (props) => {
   const { podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, activePlayerTime, collections, useCollectionsView, playerLayout, collectionArtworkUrl, theme } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const { t } = useTranslation();
 
   // Clean up deletingIds state if a podcast is removed by other means
   useEffect(() => {
@@ -35,7 +37,7 @@ const PodcastList: React.FC<PodcastListProps> = (props) => {
   }, [podcasts, deletingIds]);
   
   const handleDeleteRequest = (id: string) => {
-    if (window.confirm(`Are you sure you want to delete this audio file?`)) {
+    if (window.confirm(t('podcast.deleteConfirm'))) {
       setDeletingIds(prev => new Set(prev).add(id));
     }
   };
