@@ -60,6 +60,7 @@ const SOUNDS: { id: CompletionSound; name: string }[] = [
   { id: 'none', name: 'None' },
   { id: 'minecraft', name: 'Minecraft' },
   { id: 'pokemon', name: 'Pokémon' },
+    { id: 'otherday', name: 'OtherDay' },
   { id: 'runescape', name: 'RuneScape' },
 ];
 

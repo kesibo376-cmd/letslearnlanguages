@@ -19,6 +19,7 @@ const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none'>, string> = 
   minecraft: 'https://www.myinstants.com/media/sounds/levelup.mp3',
   pokemon: 'https://www.myinstants.com/media/sounds/12_3.mp3',
   runescape: 'https://www.myinstants.com/media/sounds/runescape-attack-level-up.mp3',
+  otherday: 'https://www.myinstants.com/media/sounds/another-day-another-victory-for-da-og.mp3',
 };
 
 const LoadingSpinner = () => (
