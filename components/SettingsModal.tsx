@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode } from '../types';
+import type { Theme, StreakData, StreakDifficulty, CompletionSound, User } from '../types';
 import { formatBytes } from '../lib/utils';
 import ToggleSwitch from './ToggleSwitch';
 import ImageIcon from './icons/ImageIcon';
@@ -15,8 +16,6 @@ interface SettingsModalProps {
   onOpenClearDataModal: () => void;
   currentTheme: Theme;
   onSetTheme: (theme: Theme) => void;
-  layoutMode: LayoutMode;
-  onSetLayoutMode: (mode: LayoutMode) => void;
   streakData: StreakData;
   onSetStreakData: (data: StreakData) => void;
   hideCompleted: boolean;
@@ -47,11 +46,6 @@ const THEMES: { id: Theme; name: string }[] = [
   { id: 'retro-web', name: 'Retro Web' },
 ];
 
-const LAYOUTS: { id: LayoutMode; name: string }[] = [
-  { id: 'default', name: 'Default List' },
-  { id: 'pimsleur', name: 'Pimsleur Grid' },
-];
-
 const DIFFICULTIES: { id: StreakDifficulty, name: string, description: string }[] = [
     { id: 'easy', name: 'Easy', description: 'Listen to any audio.' },
     { id: 'normal', name: 'Normal', description: 'Complete 1 audio.' },
@@ -69,8 +63,8 @@ const SOUNDS: { id: CompletionSound; name: string }[] = [
 const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   const {
     isOpen, onClose, onResetProgress, onOpenClearDataModal, currentTheme, onSetTheme,
-    layoutMode, onSetLayoutMode, streakData, onSetStreakData, hideCompleted, onSetHideCompleted, 
-    reviewModeEnabled, onSetReviewModeEnabled, customArtwork, onSetCustomArtwork, onExportData,
+    streakData, onSetStreakData, hideCompleted, onSetHideCompleted, reviewModeEnabled,
+    onSetReviewModeEnabled, customArtwork, onSetCustomArtwork, onExportData,
     onImportData, completionSound, onSetCompletionSound, useCollectionsView,
     onSetUseCollectionsView, playOnNavigate, onSetPlayOnNavigate, totalStorageUsed,
     user, onLogout
@@ -78,7 +72,6 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
   const importInputRef = React.useRef<HTMLInputElement>(null);
   const [artworkUrl, setArtworkUrl] = useState(customArtwork || '');
-  const [isSavingArtwork, setIsSavingArtwork] = useState(false);
 
   useEffect(() => {
     // Sync local state if prop changes from outside
@@ -110,32 +103,14 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     }
   };
 
-  const handleArtworkSave = async () => {
-    const trimmedUrl = artworkUrl.trim();
-    if (trimmedUrl && !trimmedUrl.match(/^(https?|data):/)) {
-      alert('Please enter a valid image URL (starting with http://, https://, or data:).');
-      return;
-    }
-
-    setIsSavingArtwork(true);
-    try {
-      if (trimmedUrl.startsWith('https://source.unsplash.com')) {
-        const response = await fetch(trimmedUrl);
-        if (response.ok && response.url) {
-          onSetCustomArtwork(response.url);
-          setArtworkUrl(response.url);
-        } else {
-          throw new Error('Could not fetch the image from Unsplash.');
-        }
-      } else {
-        onSetCustomArtwork(trimmedUrl || null);
+  const handleArtworkSave = () => {
+      // Basic URL validation
+      if (artworkUrl && !artworkUrl.match(/^(https?|data):/)) {
+          alert('Please enter a valid image URL (starting with http://, https://, or data:).');
+          return;
       }
-    } catch (error) {
-      console.error("Error resolving/saving artwork URL:", error);
-      alert("Sorry, there was a problem getting the image from that URL. Please try a different one.");
-    } finally {
-      setIsSavingArtwork(false);
-    }
+      onSetCustomArtwork(artworkUrl.trim() || null);
+      // Maybe show a success message? For now, it just saves.
   };
 
   const handleArtworkRemove = () => {
@@ -145,7 +120,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
   return (
     <div 
-      className={`fixed inset-0 bg-black z-40 p-4 transition-all duration-300 ease-in-out ${isOpen ? 'bg-opacity-75 backdrop-blur-sm' : 'bg-opacity-0 pointer-events-none'}`}
+      className={`fixed inset-0 bg-black z-40 p-4 transition-opacity duration-300 ease-in-out ${isOpen ? 'bg-opacity-75 backdrop-blur-sm' : 'bg-opacity-0 pointer-events-none'}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -190,16 +165,6 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                 </div>
             </div>
             <div>
-                <label className="block text-sm font-medium text-brand-text-secondary mb-2">Layout</label>
-                <div className="grid grid-cols-2 gap-2">
-                    {LAYOUTS.map(layout => (
-                        <button key={layout.id} onClick={() => onSetLayoutMode(layout.id)} className={`w-full text-center p-2 text-sm rounded-md transition-colors duration-200 b-border ${layoutMode === layout.id ? 'active' : 'bg-brand-surface-light hover:bg-opacity-75'}`}>
-                        {layout.name}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div>
                 <label htmlFor="artwork-url-input" className="block text-sm font-medium text-brand-text-secondary mb-2">Player Artwork URL</label>
                 <div className="p-3 bg-brand-surface-light rounded-md b-border flex flex-col gap-3">
                     <div className="flex items-center gap-3">
@@ -217,9 +182,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                     </div>
                     <div className="flex gap-2 justify-end">
                       {customArtwork && <button onClick={handleArtworkRemove} className="text-sm px-3 py-1.5 bg-brand-surface hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border text-red-500">Remove</button>}
-                      <button onClick={handleArtworkSave} disabled={isSavingArtwork} className="text-sm px-4 py-1.5 bg-brand-primary text-brand-text-on-primary hover:bg-brand-primary-hover rounded-md transition-colors duration-200 b-border disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        {isSavingArtwork ? 'Saving...' : 'Save'}
-                      </button>
+                      <button onClick={handleArtworkSave} className="text-sm px-4 py-1.5 bg-brand-primary text-brand-text-on-primary hover:bg-brand-primary-hover rounded-md transition-colors duration-200 b-border">Save</button>
                     </div>
                 </div>
             </div>
@@ -230,11 +193,15 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">Features</h3>
             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
                 <div><p className="font-semibold">Organize with Collections</p><p className="text-sm text-brand-text-secondary">Group audio files into folders.</p></div>
-                <ToggleSwitch isOn={useCollectionsView} handleToggle={() => onSetUseCollectionsView(!useCollectionsView)} />
+                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+                    <ToggleSwitch isOn={useCollectionsView} handleToggle={() => onSetUseCollectionsView(!useCollectionsView)} />
+                </div>
             </div>
             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
                 <div><p className="font-semibold">Enable Streak</p><p className="text-sm text-brand-text-secondary">Track your daily listening activity.</p></div>
-                <ToggleSwitch isOn={streakData.enabled} handleToggle={handleStreakToggle} />
+                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+                    <ToggleSwitch isOn={streakData.enabled} handleToggle={handleStreakToggle} />
+                </div>
             </div>
             <div className={`p-3 bg-brand-surface-light rounded-md b-border transition-opacity ${!streakData.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
                 <p className="font-semibold mb-2">Streak Difficulty</p>
@@ -248,15 +215,21 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             </div>
             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
                 <div><p className="font-semibold">Review Mode</p><p className="text-sm text-brand-text-secondary">Prompt to review previous lesson.</p></div>
-                <ToggleSwitch isOn={reviewModeEnabled} handleToggle={() => onSetReviewModeEnabled(!reviewModeEnabled)} />
+                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+                    <ToggleSwitch isOn={reviewModeEnabled} handleToggle={() => onSetReviewModeEnabled(!reviewModeEnabled)} />
+                </div>
             </div>
             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
                 <div><p className="font-semibold">Auto-play Collection</p><p className="text-sm text-brand-text-secondary">Start playing when opening a collection.</p></div>
-                <ToggleSwitch isOn={playOnNavigate} handleToggle={() => onSetPlayOnNavigate(!playOnNavigate)} />
+                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+                    <ToggleSwitch isOn={playOnNavigate} handleToggle={() => onSetPlayOnNavigate(!playOnNavigate)} />
+                </div>
             </div>
             <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
                 <div><p className="font-semibold">Hide Completed</p><p className="text-sm text-brand-text-secondary">Remove listened items from the list.</p></div>
-                <ToggleSwitch isOn={hideCompleted} handleToggle={() => onSetHideCompleted(!hideCompleted)} />
+                <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+                    <ToggleSwitch isOn={hideCompleted} handleToggle={() => onSetHideCompleted(!hideCompleted)} />
+                </div>
             </div>
             <div>
                 <label className="block text-sm font-medium text-brand-text-secondary mb-2">Completion Sound</label>
