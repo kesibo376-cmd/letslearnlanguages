@@ -15,10 +15,11 @@ interface PodcastListProps {
   collections: Collection[];
   useCollectionsView: boolean;
   playerLayout: LayoutMode;
+  collectionArtworkUrl?: string | null;
 }
 
 const PodcastList: React.FC<PodcastListProps> = (props) => {
-  const { podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, activePlayerTime, collections, useCollectionsView, playerLayout } = props;
+  const { podcasts, currentPodcastId, isPlaying, onSelectPodcast, onDeletePodcast, onTogglePodcastComplete, onMovePodcastToCollection, hideCompleted, activePlayerTime, collections, useCollectionsView, playerLayout, collectionArtworkUrl } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
@@ -42,11 +43,13 @@ const PodcastList: React.FC<PodcastListProps> = (props) => {
       onDeletePodcast(id);
     }
   };
+  
+  const isPimsleurGrid = playerLayout === 'pimsleur' && useCollectionsView;
 
   return (
     <div 
       ref={listRef}
-      className="relative"
+      className={isPimsleurGrid ? "grid grid-cols-2 md:grid-cols-4 gap-4" : "relative"}
     >
       {podcasts.map((podcast, index) => (
         <PodcastItem
@@ -65,6 +68,7 @@ const PodcastList: React.FC<PodcastListProps> = (props) => {
           progressOverride={currentPodcastId === podcast.id ? activePlayerTime : undefined}
           useCollectionsView={useCollectionsView}
           playerLayout={playerLayout}
+          collectionArtworkUrl={collectionArtworkUrl}
         />
       ))}
     </div>
