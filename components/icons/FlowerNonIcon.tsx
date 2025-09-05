@@ -7,7 +7,7 @@ interface IconProps {
 
 const FlowerNonIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
   <img
-    src="/components/icons/STR-non.png"
+    src="https://cheery-mooncake-49edfd.netlify.app/str-non.png"
     width={size}
     height={size}
     className={className}

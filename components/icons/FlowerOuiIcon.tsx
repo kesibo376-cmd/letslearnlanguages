@@ -7,7 +7,7 @@ interface IconProps {
 
 const FlowerOuiIcon: React.FC<IconProps> = ({ size = 24, className = '' }) => (
   <img
-    src="/components/icons/STR-oui.png"
+    src="https://cheery-mooncake-49edfd.netlify.app/str-oui.png"
     width={size}
     height={size}
     className={className}
