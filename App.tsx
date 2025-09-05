@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -474,7 +471,7 @@ export default function App() {
 }
 
 function useStreak(streakData: StreakData, updateUserData: (data: Partial<any>) => void) {
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date()), []);
   
   const STREAK_GOALS: Record<StreakDifficulty, number> = { easy: 1, normal: 1, hard: 2, extreme: 3 };
 
@@ -485,12 +482,12 @@ function useStreak(streakData: StreakData, updateUserData: (data: Partial<any>) 
 
   const updateStreak = useCallback((data: StreakData, forceToday?: boolean) => {
       const today = new Date();
-      const currentTodayStr = today.toISOString().split('T')[0];
+      const currentTodayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(today);
       if (data.lastListenDate === currentTodayStr && !forceToday) return data;
       
       const yesterday = new Date(today);
       yesterday.setDate(today.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const yesterdayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(yesterday);
       
       const isConsecutive = data.lastListenDate === yesterdayStr;
       const newCurrentStreak = isConsecutive ? data.currentStreak + 1 : 1;

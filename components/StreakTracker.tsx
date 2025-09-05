@@ -1,34 +1,36 @@
+
 import React from 'react';
-import type { StreakData, Theme } from '../types';
+import type { StreakData } from '../types';
 import FireIcon from './icons/FireIcon';
 
 interface StreakTrackerProps {
   streakData: StreakData;
   isTodayComplete: boolean;
-  theme: Theme;
 }
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-const StreakTracker: React.FC<StreakTrackerProps> = ({ streakData, isTodayComplete, theme }) => {
+const StreakTracker: React.FC<StreakTrackerProps> = ({ streakData, isTodayComplete }) => {
   const { currentStreak, history } = streakData;
 
-  const today = new Date();
-  const todayDateString = today.toISOString().split('T')[0];
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  const now = new Date();
 
-  // Adjust so Monday is 0 and Sunday is 6
-  const dayOfWeekAdjusted = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  // Formatter for YYYY-MM-DD in Paris timezone
+  const parisDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' });
+  const todayDateString = parisDateFormatter.format(now);
 
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - dayOfWeekAdjusted);
-  monday.setHours(0, 0, 0, 0); // Normalize to start of the day
+  // Formatter to get weekday for determining week start
+  const parisWeekdayFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', weekday: 'short' });
+  const weekdaysShort = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const currentDayName = parisWeekdayFormatter.format(now);
+  const dayOfWeekAdjusted = weekdaysShort.indexOf(currentDayName); // 0=Mon, 6=Sun
 
   const daysOfThisWeek = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const date = new Date(now);
+    // Go back to the start of the week (Monday) and then add i days
+    date.setDate(date.getDate() - dayOfWeekAdjusted + i);
     return {
-      date: d.toISOString().split('T')[0],
+      date: parisDateFormatter.format(date),
       dayLabel: DAY_LABELS[i],
     };
   });
@@ -36,11 +38,11 @@ const StreakTracker: React.FC<StreakTrackerProps> = ({ streakData, isTodayComple
   const historySet = new Set(history);
 
   return (
-    <div className="streak-tracker flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8 bg-brand-surface text-brand-text rounded-lg p-4 b-border b-shadow">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8 bg-brand-surface text-brand-text rounded-lg p-4 b-border b-shadow">
       {/* Streak Count */}
       <div className="flex items-center gap-4 self-start sm:self-center">
         <div className="flex-shrink-0 flex items-center justify-center bg-brand-surface-light rounded-full w-14 h-14 b-border">
-            <FireIcon size={36} isFilled={isTodayComplete} theme={theme} />
+            <FireIcon size={28} className="text-orange-400" isFilled={isTodayComplete}/>
         </div>
         <div>
             <span className="font-bold text-4xl leading-none">{currentStreak}</span>
