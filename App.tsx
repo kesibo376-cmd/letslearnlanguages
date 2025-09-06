@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -80,6 +81,15 @@ export default function App() {
   const [currentView, setCurrentView] = useState<string | null>(null);
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
   const [isAppReady, setIsAppReady] = useState(false);
+  const [isMinLoadTimeMet, setIsMinLoadTimeMet] = useState(false);
+
+  useEffect(() => {
+    // Enforce a minimum loading time to prevent screen flicker on fast loads.
+    const timer = setTimeout(() => {
+      setIsMinLoadTimeMet(true);
+    }, 1000); // 1 second
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     // App is ready if auth is done and we either have no user (login screen)
@@ -369,7 +379,7 @@ export default function App() {
     [podcasts, currentPodcastId]
   );
   
-  if (!isAppReady) {
+  if (!isAppReady || !isMinLoadTimeMet) {
     return <LoadingSpinner />;
   }
   
