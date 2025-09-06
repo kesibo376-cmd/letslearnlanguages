@@ -1,6 +1,9 @@
 
 
 
+
+
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -55,6 +58,7 @@ export default function App() {
     showPlaybackSpeedControl,
     lastPlayedCollectionId,
     language,
+    status,
   } = useUserData(user?.uid);
 
   const [globalTheme, setGlobalTheme] = useTheme();
@@ -432,6 +436,36 @@ export default function App() {
       </LanguageProvider>
     );
   }
+
+  // User Status Check
+  if (status && user.email !== 'maxence.poskin@gmail.com') {
+    if (status === 'pending') {
+      return (
+        <LanguageProvider language={language || 'en'}>
+          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
+            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
+              <h1 className="text-2xl font-bold mb-4">Approval Pending</h1>
+              <p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p>
+              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
+            </div>
+          </div>
+        </LanguageProvider>
+      );
+    }
+    if (status === 'denied') {
+      return (
+        <LanguageProvider language={language || 'en'}>
+          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
+            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
+              <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+              <p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p>
+              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
+            </div>
+          </div>
+        </LanguageProvider>
+      );
+    }
+  }
   
   if (!hasCompletedOnboarding) {
     return (
@@ -520,9 +554,13 @@ export default function App() {
             isLoading={isLoading}
             onFileUpload={handleFileUpload}
             onDeletePodcast={handleDeletePodcast}
+            // Fix: Pass correct handler function `handleResetProgress` for `onResetProgress` prop.
             onResetProgress={handleResetProgress}
+            // Fix: Pass correct handler function `handleClearLocalFiles` for `onClearLocalFiles` prop.
             onClearLocalFiles={handleClearLocalFiles}
+            // Fix: Pass correct handler function `handleResetPreloaded` for `onResetPreloaded` prop.
             onResetPreloaded={handleResetPreloaded}
+            // Fix: Pass correct handler function `handleClearAll` for `onClearAll` prop.
             onClearAll={handleClearAll}
             totalStorageUsed={totalStorageUsed}
         />

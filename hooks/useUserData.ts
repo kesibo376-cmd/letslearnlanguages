@@ -212,6 +212,7 @@ export function useUserData(userId?: string) {
     const showPlaybackSpeedControl = loadedData.showPlaybackSpeedControl;
     const lastPlayedCollectionId = loadedData.lastPlayedCollectionId;
     const language = loadedData.language;
+    const status = loadedData.status;
     
     const totalStorageUsed = useMemo(() => {
         if (podcasts) {
@@ -243,5 +244,6 @@ export function useUserData(userId?: string) {
         showPlaybackSpeedControl,
         lastPlayedCollectionId,
         language,
+        status,
     };
 }

@@ -1,8 +1,10 @@
 
 
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode, Language } from '../types';
 import { formatBytes } from '../lib/utils';
+import { db } from '../firebase';
 import ToggleSwitch from './ToggleSwitch';
 import ImageIcon from './icons/ImageIcon';
 import DownloadIcon from './icons/DownloadIcon';
@@ -13,6 +15,9 @@ import UserIcon from './icons/UserIcon';
 import PaintBrushIcon from './icons/PaintBrushIcon';
 import SparklesIcon from './icons/SparklesIcon';
 import WarningIcon from './icons/WarningIcon';
+import ShieldIcon from './icons/ShieldIcon';
+import UserCheckIcon from './icons/UserCheckIcon';
+import UserXIcon from './icons/UserXIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
@@ -82,18 +87,22 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   } = props;
 
   const { t, language } = useTranslation();
-  
+  const isAdmin = user.email === 'maxence.poskin@gmail.com';
+
   const CATEGORIES = [
     { id: 'account', label: t('settings.categories.account'), icon: UserIcon },
     { id: 'appearance', label: t('settings.categories.appearance'), icon: PaintBrushIcon },
     { id: 'features', label: t('settings.categories.features'), icon: SparklesIcon },
     { id: 'data', label: t('settings.categories.data'), icon: DatabaseIcon },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: ShieldIcon }] : []),
     { id: 'danger', label: t('settings.categories.danger'), icon: WarningIcon, isDanger: true },
   ];
 
   const [activeCategory, setActiveCategory] = useState('account');
   const importInputRef = React.useRef<HTMLInputElement>(null);
   const [artworkUrl, setArtworkUrl] = useState(customArtwork || '');
+  const [pendingUsers, setPendingUsers] = useState<{ id: string, email: string }[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -101,6 +110,40 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       setArtworkUrl(customArtwork || '');
     }
   }, [isOpen, customArtwork]);
+
+  const fetchPendingUsers = useCallback(async () => {
+    if (!isAdmin) return;
+    setIsLoadingUsers(true);
+    try {
+      const usersSnapshot = await db.collection('users').where('status', '==', 'pending').orderBy('createdAt', 'desc').get();
+      const usersList = usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        email: doc.data().email || 'No email',
+      }));
+      setPendingUsers(usersList);
+    } catch (error) {
+      console.error("Error fetching pending users:", error);
+      alert("Could not fetch user requests.");
+    }
+    setIsLoadingUsers(false);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isOpen && isAdmin && activeCategory === 'admin') {
+      fetchPendingUsers();
+    }
+  }, [isOpen, isAdmin, activeCategory, fetchPendingUsers]);
+  
+  const handleUserApproval = async (userId: string, newStatus: 'approved' | 'denied') => {
+    try {
+        await db.collection('users').doc(userId).update({ status: newStatus });
+        setPendingUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+        alert(`User has been ${newStatus}.`);
+    } catch (error) {
+        console.error(`Error updating user status to ${newStatus}:`, error);
+        alert(`Failed to ${newStatus} user.`);
+    }
+  };
 
   const handleResetClick = () => {
     if (window.confirm(t('settings.danger.confirmReset'))) {
@@ -290,12 +333,48 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     </div>
   );
   
+  const AdminSection = () => (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">Admin Panel</h3>
+      <div>
+        <div className="flex justify-between items-center mb-2">
+            <p className="font-semibold">Pending User Requests</p>
+            <button onClick={fetchPendingUsers} disabled={isLoadingUsers} className="text-sm p-2 rounded-md hover:bg-brand-surface-light">
+                {isLoadingUsers ? 'Loading...' : 'Refresh'}
+            </button>
+        </div>
+        <div className="space-y-2 p-3 bg-brand-surface-light rounded-md b-border max-h-60 overflow-y-auto">
+            {isLoadingUsers ? (
+                <p className="text-brand-text-secondary text-center">Loading users...</p>
+            ) : pendingUsers.length > 0 ? (
+                pendingUsers.map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-2 bg-brand-surface rounded-md b-border">
+                        <span className="text-sm truncate" title={u.email}>{u.email}</span>
+                        <div className="flex gap-2">
+                            <button onClick={() => handleUserApproval(u.id, 'approved')} className="p-2 text-green-600 hover:bg-green-100 rounded-md" aria-label={`Approve ${u.email}`}>
+                                <UserCheckIcon size={18}/>
+                            </button>
+                            <button onClick={() => handleUserApproval(u.id, 'denied')} className="p-2 text-red-500 hover:bg-red-100 rounded-md" aria-label={`Deny ${u.email}`}>
+                                <UserXIcon size={18}/>
+                            </button>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <p className="text-brand-text-secondary text-center">No pending requests.</p>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+  
   const renderContent = (category: string) => {
     switch (category) {
       case 'account': return <AccountSection />;
       case 'appearance': return <AppearanceSection />;
       case 'features': return <FeaturesSection />;
       case 'data': return <DataSection />;
+      case 'admin': return <AdminSection />;
       case 'danger': return <DangerSection />;
       default: return null;
     }
@@ -347,6 +426,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                 <AppearanceSection />
                 <FeaturesSection />
                 <DataSection />
+                {isAdmin && <AdminSection />}
                 <DangerSection />
               </div>
 

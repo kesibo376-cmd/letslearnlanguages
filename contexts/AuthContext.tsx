@@ -62,7 +62,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const docSnap = await userDocRef.get();
       if (!docSnap.exists) {
         // FIX: Use v8 compat syntax for set()
-        await userDocRef.set(getDefaultData());
+        await userDocRef.set({
+            ...getDefaultData(),
+            email: newUser.email,
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
       }
     }
   }, []);
