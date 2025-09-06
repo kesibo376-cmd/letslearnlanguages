@@ -113,18 +113,21 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     if (!isAdmin) return;
     setIsLoadingUsers(true);
     try {
-      // Removed .orderBy() to avoid needing a composite index in Firestore.
-      // Sorting will be handled on the client-side.
-      const usersSnapshot = await db.collection('users').where('status', '==', 'pending').get();
-      const usersList = usersSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          email: data.email || 'No email',
-          createdAt: data.createdAt || null, // Fetch timestamp for sorting
-        };
-      });
-      
+      // Fetch all user documents to avoid needing a Firestore index.
+      // Then, filter them on the client-side. This is efficient for a
+      // small number of users and more robust for the user.
+      const usersSnapshot = await db.collection('users').get();
+      const usersList = usersSnapshot.docs
+        .filter(doc => doc.data().status === 'pending')
+        .map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            email: data.email || 'No email',
+            createdAt: data.createdAt || null,
+          };
+        });
+
       // Sort users client-side to show newest first
       usersList.sort((a, b) => {
         if (a.createdAt && b.createdAt) {
@@ -138,7 +141,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
       setPendingUsers(usersList);
     } catch (error) {
-      console.error("Error fetching pending users:", error);
+      console.error("Error fetching users:", error);
       alert("Could not fetch user requests.");
     }
     setIsLoadingUsers(false);
