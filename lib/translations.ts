@@ -22,7 +22,7 @@ export const translations = {
     },
     streak: {
       dayStreak: 'Day Streak',
-      days: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+      days: 'M,T,W,T,F,S,S',
     },
     statusBar: {
       complete: '% Complete',
@@ -197,7 +197,7 @@ export const translations = {
     },
     streak: {
       dayStreak: '连续打卡',
-      days: ['一', '二', '三', '四', '五', '六', '日'],
+      days: '一,二,三,四,五,六,日',
     },
     statusBar: {
       complete: '完成 {{percentage}}%',
