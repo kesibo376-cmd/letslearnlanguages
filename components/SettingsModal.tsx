@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode, Language } from '../types';
 import { formatBytes } from '../lib/utils';
@@ -65,8 +66,9 @@ const SOUNDS: { id: CompletionSound; name: string }[] = [
   { id: 'none', name: 'None' },
   { id: 'minecraft', name: 'Minecraft' },
   { id: 'pokemon', name: 'Pokémon' },
-    { id: 'otherday', name: 'OtherDay' },
+  { id: 'otherday', name: 'OtherDay' },
   { id: 'runescape', name: 'RuneScape' },
+  { id: 'random', name: 'Random' },
 ];
 
 const SettingsModal: React.FC<SettingsModalProps> = (props) => {

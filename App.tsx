@@ -15,7 +15,7 @@ import Confetti from './components/Confetti';
 import { LanguageProvider } from './contexts/LanguageContext';
 import OnboardingModal from './components/OnboardingModal';
 
-const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none'>, string> = {
+const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none' | 'random'>, string> = {
   minecraft: 'https://www.myinstants.com/media/sounds/levelup.mp3',
   pokemon: 'https://www.myinstants.com/media/sounds/12_3.mp3',
   runescape: 'https://www.myinstants.com/media/sounds/runescape-attack-level-up.mp3',
@@ -172,7 +172,18 @@ export default function App() {
     }
 
     if (completionSound !== 'none') {
-      const soundUrl = COMPLETION_SOUND_URLS[completionSound];
+      let soundUrl: string | undefined;
+
+      if (completionSound === 'random') {
+        const soundKeys = Object.keys(COMPLETION_SOUND_URLS) as (keyof typeof COMPLETION_SOUND_URLS)[];
+        if (soundKeys.length > 0) {
+            const randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
+            soundUrl = COMPLETION_SOUND_URLS[randomKey];
+        }
+      } else {
+        soundUrl = COMPLETION_SOUND_URLS[completionSound];
+      }
+
       if (soundUrl && soundAudioRef.current) {
         soundAudioRef.current.src = soundUrl;
         soundAudioRef.current.play().catch(e => console.error("Error playing completion sound:", e));
