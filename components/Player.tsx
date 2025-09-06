@@ -229,6 +229,11 @@ const Player: React.FC<PlayerProps> = ({
   // --- Drag-to-close logic (unchanged) ---
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isPlayerExpanded) return;
+    const target = e.target as HTMLElement;
+    // If the touch starts on an element (or its child) that should not trigger a drag, abort.
+    if (target.closest('[data-no-drag="true"]')) {
+      return;
+    }
     setDragState({ isDragging: true, startY: e.touches[0].clientY, deltaY: 0 });
   };
 
@@ -257,7 +262,7 @@ const Player: React.FC<PlayerProps> = ({
     const offset = circumference - (progressPercent / 100) * circumference;
     return (
       <div className="flex-grow flex flex-col items-center justify-center text-center gap-8 w-full">
-        <div className="relative" style={{ width: size, height: size }}>
+        <div className="relative" style={{ width: size, height: size }} data-no-drag="true">
           <svg width={size} height={size} className="transform -rotate-90">
             <circle cx={size / 2} cy={size / 2} r={radius} stroke="var(--brand-surface)" strokeWidth={strokeWidth} fill="transparent" />
             <circle cx={size / 2} cy={size / 2} r={radius} stroke="var(--brand-primary)" strokeWidth={strokeWidth} fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-300 ease-linear" />
@@ -270,7 +275,7 @@ const Player: React.FC<PlayerProps> = ({
           </div>
         </div>
         <h2 className="text-2xl font-bold text-brand-text mt-4 px-4">{podcast.name}</h2>
-        <div className="flex items-center justify-center gap-2 w-full max-w-sm">
+        <div className="flex items-center justify-center gap-2 w-full max-w-sm" data-no-drag="true">
           <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
@@ -293,7 +298,7 @@ const Player: React.FC<PlayerProps> = ({
           <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-brand-text">{podcast.name}</h2>
-        <div className="w-full max-w-md px-4 sm:px-0">
+        <div className="w-full max-w-md px-4 sm:px-0" data-no-drag="true">
           <div className="w-full bg-brand-surface rounded-full h-1.5 cursor-pointer group b-border" onClick={handleSeek} onTouchStart={(e) => e.stopPropagation()}>
             <div className="bg-brand-primary h-full rounded-full transition-all duration-200 ease-linear" style={{ width: `${progressPercent}%` }} />
           </div>
@@ -302,7 +307,7 @@ const Player: React.FC<PlayerProps> = ({
             <span>{formatTime(podcast.duration || 0)}</span>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-2 w-full max-w-sm">
+        <div className="flex items-center justify-center gap-2 w-full max-w-sm" data-no-drag="true">
           {showPlaybackSpeedControl && (
             <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-2 rounded-md w-16 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
               {playbackRate}x
@@ -343,7 +348,7 @@ const Player: React.FC<PlayerProps> = ({
           </div>
 
           {isSettingsMenuOpen && (
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20 animate-fade-in" onClick={() => setIsSettingsMenuOpen(false)}>
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20 animate-fade-in" onClick={() => setIsSettingsMenuOpen(false)} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
               <div className="bg-brand-surface rounded-lg p-6 w-full max-w-xs b-border b-shadow animate-scale-in" onClick={e => e.stopPropagation()}>
                   <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-bold text-brand-text">Player Settings</h3>
