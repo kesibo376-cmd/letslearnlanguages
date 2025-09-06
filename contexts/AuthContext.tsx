@@ -1,14 +1,8 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import type { User as AppUser } from '../types';
-import { auth, db } from '../firebase';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  User as FirebaseUser,
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db, firebase } from '../firebase';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
 import { getDefaultData } from '../hooks/useUserData';
 
 
@@ -33,7 +27,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+    // FIX: Use v8 compat syntax for onAuthStateChanged
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser: firebase.User | null) => {
       if (firebaseUser) {
         setUser({
             uid: firebaseUser.uid,
@@ -48,27 +43,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = useCallback(async (email: string, pass: string): Promise<void> => {
-    await signInWithEmailAndPassword(auth, email, pass);
+    // FIX: Use v8 compat syntax for signInWithEmailAndPassword
+    await auth.signInWithEmailAndPassword(email, pass);
   }, []);
 
   const signup = useCallback(async (email: string, pass: string): Promise<void> => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+    // FIX: Use v8 compat syntax for createUserWithEmailAndPassword
+    const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
     const newUser = userCredential.user;
 
     // Create a new document for the user in Firestore
     if (newUser) {
-      const userDocRef = doc(db, 'users', newUser.uid);
+      // FIX: Use v8 compat syntax for Firestore document reference
+      const userDocRef = db.collection('users').doc(newUser.uid);
       
       // Check if document already exists to avoid overwriting on fast re-auth
-      const docSnap = await getDoc(userDocRef);
-      if (!docSnap.exists()) {
-        await setDoc(userDocRef, getDefaultData());
+      // FIX: Use v8 compat syntax for get() and .exists property
+      const docSnap = await userDocRef.get();
+      if (!docSnap.exists) {
+        // FIX: Use v8 compat syntax for set()
+        await userDocRef.set(getDefaultData());
       }
     }
   }, []);
   
   const logout = useCallback(() => {
-    signOut(auth);
+    // FIX: Use v8 compat syntax for signOut
+    auth.signOut();
   }, []);
 
   return (

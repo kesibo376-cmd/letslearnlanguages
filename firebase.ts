@@ -24,7 +24,6 @@ const firebaseConfig = {
 };
 
 
-
 // Initialize Firebase
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
@@ -36,4 +35,4 @@ const db = firebase.firestore();
 
 // Export services for use in other parts of the app
 // Note: Firebase Storage is not used in this version.
-export { auth, db };
+export { auth, db, firebase };
