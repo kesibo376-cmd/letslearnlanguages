@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode, Language } from '../types';
 import { formatBytes } from '../lib/utils';
@@ -113,36 +112,24 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     if (!isAdmin) return;
     setIsLoadingUsers(true);
     try {
-      // Fetch all user documents to avoid needing a Firestore index.
-      // Then, filter them on the client-side. This is efficient for a
-      // small number of users and more robust for the user.
-      const usersSnapshot = await db.collection('users').get();
-      const usersList = usersSnapshot.docs
-        .filter(doc => doc.data().status === 'pending')
-        .map(doc => {
+      const requestsSnapshot = await db.collection('user_requests')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const usersList = requestsSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
             id: doc.id,
             email: data.email || 'No email',
             createdAt: data.createdAt || null,
           };
-        });
-
-      // Sort users client-side to show newest first
-      usersList.sort((a, b) => {
-        if (a.createdAt && b.createdAt) {
-          // Firestore Timestamps have a toMillis() method for comparison
-          return b.createdAt.toMillis() - a.createdAt.toMillis();
-        }
-        if (a.createdAt) return -1; // a comes first if b has no date
-        if (b.createdAt) return 1;  // b comes first if a has no date
-        return 0; // No change in order if neither has a date
       });
 
       setPendingUsers(usersList);
     } catch (error) {
-      console.error("Error fetching users:", error);
-      alert("Could not fetch user requests.");
+      console.error("Error fetching user requests:", error);
+      alert("Could not fetch user requests. If this persists, check the browser console for an error link to create a database index.");
     }
     setIsLoadingUsers(false);
   }, [isAdmin]);
@@ -156,7 +143,14 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   
   const handleUserApproval = async (userId: string, newStatus: 'approved' | 'denied') => {
     try {
-        await db.collection('users').doc(userId).update({ status: newStatus });
+        const userDocRef = db.collection('users').doc(userId);
+        const requestDocRef = db.collection('user_requests').doc(userId);
+
+        const batch = db.batch();
+        batch.update(userDocRef, { status: newStatus });
+        batch.update(requestDocRef, { status: newStatus });
+        await batch.commit();
+
         setPendingUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
         alert(`User has been ${newStatus}.`);
     } catch (error) {

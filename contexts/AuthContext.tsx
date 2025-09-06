@@ -48,26 +48,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signup = useCallback(async (email: string, pass: string): Promise<void> => {
-    // FIX: Use v8 compat syntax for createUserWithEmailAndPassword
     const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
     const newUser = userCredential.user;
 
-    // Create a new document for the user in Firestore
     if (newUser) {
-      // FIX: Use v8 compat syntax for Firestore document reference
       const userDocRef = db.collection('users').doc(newUser.uid);
-      
-      // Check if document already exists to avoid overwriting on fast re-auth
-      // FIX: Use v8 compat syntax for get() and .exists property
       const docSnap = await userDocRef.get();
+
       if (!docSnap.exists) {
-        // FIX: Use v8 compat syntax for set()
-        await userDocRef.set({
+        const timestamp = firebase.firestore.FieldValue.serverTimestamp();
+        const userData = {
             ...getDefaultData(),
             email: newUser.email,
             status: 'pending',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
+            createdAt: timestamp,
+        };
+        const requestData = {
+            email: newUser.email,
+            status: 'pending',
+            createdAt: timestamp,
+        };
+
+        const requestDocRef = db.collection('user_requests').doc(newUser.uid);
+
+        // Use a batch write for atomicity
+        const batch = db.batch();
+        batch.set(userDocRef, userData);
+        batch.set(requestDocRef, requestData);
+        await batch.commit();
       }
     }
   }, []);
