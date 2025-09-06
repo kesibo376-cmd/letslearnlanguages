@@ -11,6 +11,7 @@ import AuthForm from './components/AuthForm';
 import AppUI from './components/AppUI';
 import Confetti from './components/Confetti';
 import { LanguageProvider } from './contexts/LanguageContext';
+import OnboardingModal from './components/OnboardingModal';
 
 const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none'>, string> = {
   minecraft: 'https://www.myinstants.com/media/sounds/levelup.mp3',
@@ -382,17 +383,29 @@ export default function App() {
     );
   }
   
+  if (!hasCompletedOnboarding) {
+    return (
+      <LanguageProvider language={language || 'en'}>
+        <div className="text-brand-text min-h-screen animate-fade-in">
+          <OnboardingModal
+            isOpen={true}
+            onComplete={handleOnboardingComplete}
+            onImportData={(file) => handleImportData(file, handleOnboardingComplete)}
+          />
+        </div>
+      </LanguageProvider>
+    );
+  }
+
   return (
     <LanguageProvider language={language || 'en'}>
-        <div className="text-brand-text min-h-screen">
+        <div className="text-brand-text min-h-screen animate-fade-in">
         <audio ref={soundAudioRef} preload="auto" />
         {showConfetti && <Confetti count={50} theme={theme} />}
 
         <AppUI
             user={user}
             onLogout={logout}
-            hasCompletedOnboarding={hasCompletedOnboarding}
-            onOnboardingComplete={handleOnboardingComplete}
             onImportData={handleImportData}
             podcasts={podcasts}
             collections={collections}

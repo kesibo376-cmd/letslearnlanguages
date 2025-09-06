@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode } from '../types';
+import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode, Language } from '../types';
+import { useTranslation } from '../contexts/LanguageContext';
 
 import Header from './Header';
 import PodcastList from './PodcastList';
@@ -8,7 +9,6 @@ import CollectionList from './CollectionList';
 import StatusBar from './StatusBar';
 import StreakTracker from './StreakTracker';
 import SettingsModal from './SettingsModal';
-import OnboardingModal from './OnboardingModal';
 import ReviewModal from './ReviewModal';
 import CategorizeModal from './CategorizeModal';
 import CreateCollectionModal from './CreateCollectionModal';
@@ -22,8 +22,6 @@ import ChevronDownIcon from './icons/ChevronDownIcon';
 interface AppUIProps {
     user: User;
     onLogout: () => void;
-    hasCompletedOnboarding: boolean;
-    onOnboardingComplete: () => void;
     onImportData: (file: File, onSuccess?: () => void) => void;
     podcasts: Podcast[];
     collections: Collection[];
@@ -63,6 +61,7 @@ interface AppUIProps {
     dataToExport: any;
     theme: Theme;
     setTheme: (theme: Theme) => void;
+    setLanguage: (language: Language) => void;
     setStreakData: (data: StreakData) => void;
     setPodcasts: (data: Podcast[]) => void;
     setCollections: (data: Collection[]) => void;
@@ -95,18 +94,20 @@ interface AppUIProps {
 
 const AppUI: React.FC<AppUIProps> = (props) => {
   const {
-    user, onLogout, hasCompletedOnboarding, onOnboardingComplete, onImportData, podcasts, collections,
+    user, onLogout, onImportData, podcasts, collections,
     title, setTitle, streakData, isTodayComplete, currentPodcastId, isPlaying, isPlayerExpanded,
     setIsPlaying, setIsPlayerExpanded, updatePodcastProgress, handlePlaybackEnd, customArtwork, playbackRate,
     setPlaybackRate, activePlayerTime, setActivePlayerTime, isSettingsOpen, setIsSettingsOpen, hideCompleted,
     setHideCompleted, reviewModeEnabled, setReviewModeEnabled, completionSound, setCompletionSound, useCollectionsView,
     setUseCollectionsView, playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, lastPlayedCollectionId, setLastPlayedCollectionId, handleSetCustomArtwork, dataToExport, theme,
-    setTheme, setStreakData, setPodcasts, setCollections, unrecordCompletion, recordCompletion,
+    setTheme, setLanguage, setStreakData, setPodcasts, setCollections, unrecordCompletion, recordCompletion,
     allPodcastsSorted, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
     setIsCreateCollectionModalOpen, currentView, setCurrentView, isClearDataModalOpen,
     setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, totalStorageUsed
   } = props;
+
+  const { t } = useTranslation();
 
   const podcastsInCurrentView = useMemo(() => {
     if (!useCollectionsView || !currentView) {
@@ -137,9 +138,9 @@ const AppUI: React.FC<AppUIProps> = (props) => {
 
   const currentCollectionName = useMemo(() => {
       if (!currentView) return null;
-      if (currentView === 'uncategorized') return 'Uncategorized';
+      if (currentView === 'uncategorized') return t('collection.uncategorized');
       return collections.find(c => c.id === currentView)?.name || null;
-  }, [currentView, collections]);
+  }, [currentView, collections, t]);
   
   const currentCollection = useMemo(() => {
     if (!currentView || currentView === 'uncategorized') return null;
@@ -290,12 +291,6 @@ const AppUI: React.FC<AppUIProps> = (props) => {
 
   return (
     <>
-      <OnboardingModal
-        isOpen={!hasCompletedOnboarding}
-        onComplete={onOnboardingComplete}
-        onImportData={(file) => onImportData(file, onOnboardingComplete)}
-      />
-      
       <SettingsModal
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
@@ -303,6 +298,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
           onOpenClearDataModal={() => setIsClearDataModalOpen(true)}
           currentTheme={theme}
           onSetTheme={setTheme}
+          onSetLanguage={setLanguage}
           streakData={streakData}
           onSetStreakData={setStreakData}
           hideCompleted={hideCompleted}
@@ -367,123 +363,121 @@ const AppUI: React.FC<AppUIProps> = (props) => {
         onClearAll={onClearAll}
       />
 
-      <div className={`transition-opacity duration-500 ${!hasCompletedOnboarding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <div className={`max-w-4xl mx-auto p-4 sm:p-6 pb-28 min-h-screen transition-opacity duration-300 ${isPlayerExpanded ? 'opacity-0' : 'opacity-100'}`}>
-            <Header
-                title={title}
-                onSetTitle={setTitle}
-                onFileUpload={onFileUpload}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                isLoading={isLoading}
-            />
-            <main>
-                {streakData.enabled && <StreakTracker streakData={streakData} isTodayComplete={isTodayComplete} />}
-                
-                <div className="mt-6">
-                  {showCollections ? (
-                    <>
-                      <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-brand-text">Collections</h2>
-                        <button
-                            onClick={() => setIsCreateCollectionModalOpen(true)}
-                            className="flex items-center gap-2 text-sm px-3 py-2 bg-brand-surface-light hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border b-shadow-hover"
-                          >
-                          <PlusIcon size={16}/> New Collection
-                          </button>
-                      </div>
-                      <div className="mt-4 ">
-                        <CollectionList
-                            collections={collections}
-                            podcasts={podcasts}
-                            onNavigateToCollection={(id) => {
-                              setCurrentView(id);
-                              const podcastsInCollection = podcasts.filter(p => id === 'uncategorized' ? p.collectionId === null : p.collectionId === id);
-                              const firstUnplayed = podcastsInCollection.find(p => !p.isListened);
-                              if (playOnNavigate && firstUnplayed) {
-                                  startPlayback(firstUnplayed.id);
-                              }
-                              window.scrollTo(0, 0);
-                            }}
-                            onPlayCollection={handlePlayCollection}
-                            onRenameCollection={handleRenameCollection}
-                            onDeleteCollection={handleDeleteCollection}
-                            onResetCollectionProgress={handleResetCollectionProgress}
-                            onSetCollectionArtwork={handleSetCollectionArtwork}
-                            lastPlayedCollectionId={lastPlayedCollectionId}
-                            theme={theme}
-                          />
-                      </div>
-                    </>
-                  ) : (
-                    <div>
-                      {playerLayout === 'pimsleur' ? (
-                          <div className="flex justify-between items-center mb-4">
-                              <button onClick={() => setCurrentView(null)} className="text-3xl font-bold text-brand-text flex items-center gap-2 group">
-                                  <span className="truncate group-hover:underline">{currentCollectionName || 'All Audio'}</span>
-                                  <ChevronDownIcon size={24} className="text-brand-text-secondary flex-shrink-0"/>
-                              </button>
-                              <div className="text-lg font-semibold text-brand-text-secondary flex-shrink-0">
-                                  {listenedCount}/{totalCount}
-                              </div>
-                          </div>
-                      ) : (
-                          <div className="flex justify-between items-center mb-2">
-                              <div className="flex-1 text-left">
-                                  {currentView && (
-                                      <button onClick={() => setCurrentView(null)} className="flex items-center gap-1 text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
-                                          <ChevronLeftIcon size={20} /> Back to Collections
-                                      </button>
-                                  )}
-                              </div>
-                              <h2 className="flex-1 text-xl font-bold text-brand-text text-center truncate">{currentCollectionName || 'All Audio'}</h2>
-                              <div className="flex-1" />
-                          </div>
-                      )}
-
-                      {firstUnplayedInView && (
-                        <div className="my-4">
-                          <button
-                            onClick={() => startPlayback(firstUnplayedInView.id)}
-                            className="w-full flex items-center justify-center gap-3 text-lg py-3 px-6 bg-brand-primary text-brand-text-on-primary rounded-lg b-border b-shadow b-shadow-hover transition-transform transform hover:scale-[1.02] active:scale-[0.98]"
-                          >
-                            <PlayCircleIcon size={24} />
-                            <span className="font-bold">Continue Learning</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {playerLayout !== 'pimsleur' && totalCount > 0 && !showCollections && <StatusBar listenedCount={listenedCount} totalCount={totalCount} percentage={percentage} />}
-                      
-                      <div className={`mt-4 ${playerLayout !== 'pimsleur' ? 'bg-brand-surface rounded-lg shadow-lg b-border b-shadow overflow-hidden' : ''}`}>
-                          {visiblePodcasts.length > 0 ? (
-                              <PodcastList
-                                  podcasts={visiblePodcasts}
-                                  currentPodcastId={currentPodcastId}
-                                  isPlaying={isPlaying}
-                                  onSelectPodcast={handleSelectPodcast}
-                                  onDeletePodcast={onDeletePodcast}
-                                  onTogglePodcastComplete={handleTogglePodcastComplete}
-                                  onMovePodcastToCollection={handleMovePodcastToCollection}
-                                  hideCompleted={hideCompleted}
-                                  activePlayerTime={activePlayerTime}
-                                  collections={collections}
-                                  useCollectionsView={useCollectionsView}
-                                  playerLayout={playerLayout}
-                                  collectionArtworkUrl={collectionArtworkUrl}
-                                  theme={theme}
-                              />
-                          ) : (
-                              <div className="text-center p-12 text-brand-text-secondary">
-                                  <p className="font-semibold">No audio files here.</p>
-                                  <p className="text-sm mt-1">{hideCompleted ? "You've completed everything!" : "Upload some audio to get started."}</p>
-                              </div>
-                          )}
-                      </div>
+      <div className={`max-w-4xl mx-auto p-4 sm:p-6 pb-28 min-h-screen transition-opacity duration-300 ${isPlayerExpanded ? 'opacity-0' : 'opacity-100'}`}>
+          <Header
+              title={title}
+              onSetTitle={setTitle}
+              onFileUpload={onFileUpload}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              isLoading={isLoading}
+          />
+          <main>
+              {streakData.enabled && <StreakTracker streakData={streakData} isTodayComplete={isTodayComplete} />}
+              
+              <div className="mt-6">
+                {showCollections ? (
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold text-brand-text">{t('main.collections')}</h2>
+                      <button
+                          onClick={() => setIsCreateCollectionModalOpen(true)}
+                          className="flex items-center gap-2 text-sm px-3 py-2 bg-brand-surface-light hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border b-shadow-hover"
+                        >
+                        <PlusIcon size={16}/> {t('main.newCollection')}
+                        </button>
                     </div>
-                  )}
-                </div>
-            </main>
-        </div>
+                    <div className="mt-4 ">
+                      <CollectionList
+                          collections={collections}
+                          podcasts={podcasts}
+                          onNavigateToCollection={(id) => {
+                            setCurrentView(id);
+                            const podcastsInCollection = podcasts.filter(p => id === 'uncategorized' ? p.collectionId === null : p.collectionId === id);
+                            const firstUnplayed = podcastsInCollection.find(p => !p.isListened);
+                            if (playOnNavigate && firstUnplayed) {
+                                startPlayback(firstUnplayed.id);
+                            }
+                            window.scrollTo(0, 0);
+                          }}
+                          onPlayCollection={handlePlayCollection}
+                          onRenameCollection={handleRenameCollection}
+                          onDeleteCollection={handleDeleteCollection}
+                          onResetCollectionProgress={handleResetCollectionProgress}
+                          onSetCollectionArtwork={handleSetCollectionArtwork}
+                          lastPlayedCollectionId={lastPlayedCollectionId}
+                          theme={theme}
+                        />
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    {playerLayout === 'pimsleur' ? (
+                        <div className="flex justify-between items-center mb-4">
+                            <button onClick={() => setCurrentView(null)} className="text-3xl font-bold text-brand-text flex items-center gap-2 group">
+                                <span className="truncate group-hover:underline">{currentCollectionName || t('main.allAudio')}</span>
+                                <ChevronDownIcon size={24} className="text-brand-text-secondary flex-shrink-0"/>
+                            </button>
+                            <div className="text-lg font-semibold text-brand-text-secondary flex-shrink-0">
+                                {listenedCount}/{totalCount}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="flex-1 text-left">
+                                {currentView && (
+                                    <button onClick={() => setCurrentView(null)} className="flex items-center gap-1 text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
+                                        <ChevronLeftIcon size={20} /> {t('main.backToCollections')}
+                                    </button>
+                                )}
+                            </div>
+                            <h2 className="flex-1 text-xl font-bold text-brand-text text-center truncate">{currentCollectionName || t('main.allAudio')}</h2>
+                            <div className="flex-1" />
+                        </div>
+                    )}
+
+                    {firstUnplayedInView && (
+                      <div className="my-4">
+                        <button
+                          onClick={() => startPlayback(firstUnplayedInView.id)}
+                          className="w-full flex items-center justify-center gap-3 text-lg py-3 px-6 bg-brand-primary text-brand-text-on-primary rounded-lg b-border b-shadow b-shadow-hover transition-transform transform hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          <PlayCircleIcon size={24} />
+                          <span className="font-bold">{t('main.continueLearning')}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {playerLayout !== 'pimsleur' && totalCount > 0 && !showCollections && <StatusBar listenedCount={listenedCount} totalCount={totalCount} percentage={percentage} />}
+                    
+                    <div className={`mt-4 ${playerLayout !== 'pimsleur' ? 'bg-brand-surface rounded-lg shadow-lg b-border b-shadow overflow-hidden' : ''}`}>
+                        {visiblePodcasts.length > 0 ? (
+                            <PodcastList
+                                podcasts={visiblePodcasts}
+                                currentPodcastId={currentPodcastId}
+                                isPlaying={isPlaying}
+                                onSelectPodcast={handleSelectPodcast}
+                                onDeletePodcast={onDeletePodcast}
+                                onTogglePodcastComplete={handleTogglePodcastComplete}
+                                onMovePodcastToCollection={handleMovePodcastToCollection}
+                                hideCompleted={hideCompleted}
+                                activePlayerTime={activePlayerTime}
+                                collections={collections}
+                                useCollectionsView={useCollectionsView}
+                                playerLayout={playerLayout}
+                                collectionArtworkUrl={collectionArtworkUrl}
+                                theme={theme}
+                            />
+                        ) : (
+                            <div className="text-center p-12 text-brand-text-secondary">
+                                <p className="font-semibold">{t('main.noAudio')}</p>
+                                <p className="text-sm mt-1">{hideCompleted ? t('main.noAudioCompleted') : t('main.noAudioUpload')}</p>
+                            </div>
+                        )}
+                    </div>
+                  </div>
+                )}
+              </div>
+          </main>
       </div>
     </>
   );
