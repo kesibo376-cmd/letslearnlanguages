@@ -30,7 +30,7 @@ export interface StreakData {
   history: string[]; // Array of ISO Date strings for completed days
 }
 
-export type CompletionSound = 'none' | 'minecraft' | 'pokemon' | 'runescape' | 'otherday' | 'random';
+export type CompletionSound = 'none' | 'minecraft' | 'pokemon' | 'runescape' | 'otherday' | 'random' | 'nice-shot' | 'qpuc' | 'reggie' | 'master-at-work' | 'winnaar';
 
 // This interface now matches the structure of the Firebase User object
 export interface User {

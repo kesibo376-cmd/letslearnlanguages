@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -19,6 +20,11 @@ const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none' | 'random'>,
   pokemon: 'https://www.myinstants.com/media/sounds/12_3.mp3',
   runescape: 'https://www.myinstants.com/media/sounds/runescape-attack-level-up.mp3',
   otherday: 'https://www.myinstants.com/media/sounds/another-day-another-victory-for-da-og.mp3',
+  'nice-shot': 'https://www.myinstants.com/media/sounds/nice-shot-wii-sports_2zyLCKo.mp3',
+  qpuc: 'https://www.myinstants.com/media/sounds/generique-qpuc.mp3',
+  reggie: 'https://www.myinstants.com/media/sounds/reggie-animal-crossing-3ds.mp3',
+  'master-at-work': 'https://www.myinstants.com/media/sounds/you-are-watching-a-master-at-work.mp3',
+  winnaar: 'https://www.myinstants.com/media/sounds/alweer-een-winnaar.mp3',
 };
 
 const LoadingSpinner = () => (

@@ -70,6 +70,11 @@ const SOUNDS: { id: CompletionSound; name: string }[] = [
   { id: 'pokemon', name: 'Pokémon' },
   { id: 'otherday', name: 'OtherDay' },
   { id: 'runescape', name: 'RuneScape' },
+  { id: 'nice-shot', name: 'Wii Sports' },
+  { id: 'qpuc', name: 'QPUC' },
+  { id: 'reggie', name: 'Reggie' },
+  { id: 'master-at-work', name: 'Master at Work' },
+  { id: 'winnaar', name: 'Winnaar' },
   { id: 'random', name: 'Random' },
 ];
 
