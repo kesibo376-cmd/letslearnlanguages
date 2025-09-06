@@ -431,6 +431,10 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                       <div className="my-4">
                         <button
                           onClick={() => startPlayback(firstUnplayedInView.id)}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            startPlayback(firstUnplayedInView.id);
+                          }}
                           className="w-full flex items-center justify-center gap-3 text-lg py-3 px-6 bg-brand-primary text-brand-text-on-primary rounded-lg b-border b-shadow b-shadow-hover transition-transform transform hover:scale-[1.02] active:scale-[0.98]"
                         >
                           <PlayCircleIcon size={24} />
