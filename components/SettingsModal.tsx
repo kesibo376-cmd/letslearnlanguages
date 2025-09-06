@@ -112,9 +112,9 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     if (!isAdmin) return;
     setIsLoadingUsers(true);
     try {
+      // Simplified query to avoid needing a composite index
       const requestsSnapshot = await db.collection('user_requests')
         .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
         .get();
 
       const usersList = requestsSnapshot.docs.map(doc => {
@@ -125,11 +125,19 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             createdAt: data.createdAt || null,
           };
       });
+      
+      // Sort on the client-side
+      usersList.sort((a, b) => {
+        if (!a.createdAt) return 1;
+        if (!b.createdAt) return -1;
+        // Firestore timestamps need to be converted to JS dates for comparison
+        return b.createdAt.toDate() - a.createdAt.toDate();
+      });
 
       setPendingUsers(usersList);
     } catch (error) {
       console.error("Error fetching user requests:", error);
-      alert("Could not fetch user requests. If this persists, check the browser console for an error link to create a database index.");
+      alert("Could not fetch user requests.");
     }
     setIsLoadingUsers(false);
   }, [isAdmin]);
