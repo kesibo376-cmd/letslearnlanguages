@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -80,6 +78,15 @@ export default function App() {
   const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState<string | null>(null);
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  useEffect(() => {
+    // App is ready if auth is done and we either have no user (login screen)
+    // or we have a user and their data is loaded.
+    if (!isAuthLoading && (!user || (user && !isDataLoading))) {
+        setIsAppReady(true);
+    }
+  }, [isAuthLoading, user, isDataLoading]);
 
   // Effect to lock body scroll when modals are open
   useEffect(() => {
@@ -361,7 +368,7 @@ export default function App() {
     [podcasts, currentPodcastId]
   );
   
-  if (isAuthLoading || (user && isDataLoading)) {
+  if (!isAppReady) {
     return <LoadingSpinner />;
   }
   
