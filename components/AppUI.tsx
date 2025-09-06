@@ -68,6 +68,7 @@ interface AppUIProps {
     unrecordCompletion: (podcastId: string) => void;
     recordCompletion: (podcastId: string) => void;
     allPodcastsSorted: Podcast[];
+    podcastsInCurrentView: Podcast[];
     reviewPrompt: { show: boolean; podcastToReview: Podcast | null; podcastToPlay: Podcast | null; };
     setReviewPrompt: React.Dispatch<React.SetStateAction<{ show: boolean; podcastToReview: Podcast | null; podcastToPlay: Podcast | null; }>>;
     setNextPodcastOnEnd: React.Dispatch<React.SetStateAction<string | null>>;
@@ -101,22 +102,13 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     setHideCompleted, reviewModeEnabled, setReviewModeEnabled, completionSound, setCompletionSound, useCollectionsView,
     setUseCollectionsView, playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, lastPlayedCollectionId, setLastPlayedCollectionId, handleSetCustomArtwork, dataToExport, theme,
     setTheme, setLanguage, setStreakData, setPodcasts, setCollections, unrecordCompletion, recordCompletion,
-    allPodcastsSorted, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
+    allPodcastsSorted, podcastsInCurrentView, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
     setIsCreateCollectionModalOpen, currentView, setCurrentView, isClearDataModalOpen,
     setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, totalStorageUsed
   } = props;
 
   const { t } = useTranslation();
-
-  const podcastsInCurrentView = useMemo(() => {
-    if (!useCollectionsView || !currentView) {
-        return allPodcastsSorted;
-    }
-    return allPodcastsSorted.filter(p => (
-        currentView === 'uncategorized' ? p.collectionId === null : p.collectionId === currentView
-    ));
-  }, [allPodcastsSorted, useCollectionsView, currentView]);
 
   const visiblePodcasts = useMemo(() => {
       if (hideCompleted) {

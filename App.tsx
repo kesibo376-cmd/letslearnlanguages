@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -165,6 +166,15 @@ export default function App() {
     return [...podcasts].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   }, [podcasts]);
 
+  const podcastsInCurrentView = useMemo(() => {
+    if (!useCollectionsView || !currentView) {
+        return allPodcastsSorted;
+    }
+    return allPodcastsSorted.filter(p => (
+        currentView === 'uncategorized' ? p.collectionId === null : p.collectionId === currentView
+    ));
+  }, [allPodcastsSorted, useCollectionsView, currentView]);
+
   const handlePlaybackEnd = () => {
     if (isPlayerExpanded) {
       setShowConfetti(true);
@@ -191,12 +201,29 @@ export default function App() {
     }
   
     if (currentPodcastId) {
-       updatePodcastInState(currentPodcastId, { isListened: true });
+       updatePodcastInState(currentPodcastId, { isListened: true, progress: 0 });
+    } else {
+      setIsPlaying(false);
+      return;
     }
 
     if (nextPodcastOnEnd) {
       startPlayback(nextPodcastOnEnd);
       setNextPodcastOnEnd(null);
+      return;
+    }
+    
+    const currentIndex = podcastsInCurrentView.findIndex(p => p.id === currentPodcastId);
+
+    if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
+      const nextPodcast = podcastsInCurrentView[currentIndex + 1];
+      if (nextPodcast) {
+        setCurrentPodcastId(nextPodcast.id);
+        setActivePlayerTime(nextPodcast.progress);
+        setIsPlaying(false);
+      } else {
+        setIsPlaying(false);
+      }
     } else {
       setIsPlaying(false);
     }
@@ -475,6 +502,7 @@ export default function App() {
             unrecordCompletion={unrecordCompletion}
             recordCompletion={recordCompletion}
             allPodcastsSorted={allPodcastsSorted}
+            podcastsInCurrentView={podcastsInCurrentView}
             reviewPrompt={reviewPrompt}
             setReviewPrompt={setReviewPrompt}
             setNextPodcastOnEnd={setNextPodcastOnEnd}
