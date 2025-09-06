@@ -1,5 +1,4 @@
 
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Podcast, LayoutMode } from '../types';
 import { formatTime } from '../lib/utils';
@@ -212,6 +211,21 @@ const Player: React.FC<PlayerProps> = ({
     audio.playbackRate = playbackRate;
   };
 
+  const handleAudioEnded = useCallback(() => {
+    // Cancel any pending debounced progress updates to prevent a race condition
+    // where a stale progress update might overwrite the completed state.
+    if (progressUpdateDebounceRef.current) {
+      clearTimeout(progressUpdateDebounceRef.current);
+    }
+    // Fire one last progress update to ensure the audio is marked as complete
+    // and the completion is recorded for streaks. The parent's onEnded handler
+    // will then reset the progress to 0 for replayability.
+    if (podcast.duration > 0) {
+      onProgressSave(podcast.id, podcast.duration);
+    }
+    onEnded();
+  }, [podcast.id, podcast.duration, onProgressSave, onEnded]);
+
   // --- Drag-to-close logic (unchanged) ---
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (!isPlayerExpanded) return;
@@ -312,7 +326,7 @@ const Player: React.FC<PlayerProps> = ({
 
   return (
     <>
-      <audio ref={audioRef} src={audioSrc} onTimeUpdate={handleTimeUpdate} onEnded={onEnded} onLoadedMetadata={handleLoadedMetadata} preload="metadata" />
+      <audio ref={audioRef} src={audioSrc} onTimeUpdate={handleTimeUpdate} onEnded={handleAudioEnded} onLoadedMetadata={handleLoadedMetadata} preload="metadata" />
       <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
         {/* Expanded Player */}
         <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} style={expandedPlayerStyle} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>

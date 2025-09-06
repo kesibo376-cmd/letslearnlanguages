@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -154,7 +149,7 @@ export default function App() {
     if (podcastWasCompleted && streakData.enabled && streakData.difficulty !== 'easy') {
       recordCompletion(id);
     }
-  }, [podcasts, recordActivity, recordCompletion, streakData.enabled, streakData.difficulty, updatePodcastInState]);
+  }, [podcasts, recordActivity, recordCompletion, streakData.enabled, streakData.difficulty, updateUserData]);
 
     const updatePodcastDuration = useCallback((id: string, duration: number) => {
     if (!isNaN(duration) && duration > 0) {
@@ -184,20 +179,20 @@ export default function App() {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 5000);
     }
-
+  
     if (completionSound !== 'none') {
       let soundUrl: string | undefined;
-
+  
       if (completionSound === 'random') {
         const soundKeys = Object.keys(COMPLETION_SOUND_URLS) as (keyof typeof COMPLETION_SOUND_URLS)[];
         if (soundKeys.length > 0) {
-            const randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
-            soundUrl = COMPLETION_SOUND_URLS[randomKey];
+          const randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
+          soundUrl = COMPLETION_SOUND_URLS[randomKey];
         }
       } else {
         soundUrl = COMPLETION_SOUND_URLS[completionSound];
       }
-
+  
       if (soundUrl && soundAudioRef.current) {
         soundAudioRef.current.src = soundUrl;
         soundAudioRef.current.play().catch(e => console.error("Error playing completion sound:", e));
@@ -205,23 +200,28 @@ export default function App() {
     }
   
     if (currentPodcastId) {
-       updatePodcastInState(currentPodcastId, { isListened: true, progress: 0 });
+      // The Player component's onEnded handler calls onProgressSave one last time,
+      // which handles marking the podcast as listened and recording the completion.
+      // Here, we just need to reset the progress to 0 for replayability and reset the player's active time.
+      updatePodcastInState(currentPodcastId, { isListened: true, progress: 0 });
+      setActivePlayerTime(0);
     } else {
       setIsPlaying(false);
       return;
     }
-
+  
     if (nextPodcastOnEnd) {
       startPlayback(nextPodcastOnEnd);
       setNextPodcastOnEnd(null);
       return;
     }
-    
+  
     const currentIndex = podcastsInCurrentView.findIndex(p => p.id === currentPodcastId);
-
+  
     if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
       const nextPodcast = podcastsInCurrentView[currentIndex + 1];
       if (nextPodcast) {
+        // Prepare the next podcast but don't auto-play it
         setCurrentPodcastId(nextPodcast.id);
         setActivePlayerTime(nextPodcast.progress);
         setIsPlaying(false);
@@ -229,6 +229,7 @@ export default function App() {
         setIsPlaying(false);
       }
     } else {
+      // Last podcast in the list finished
       setIsPlaying(false);
     }
   };
