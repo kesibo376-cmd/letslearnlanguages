@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode, Language } from '../types';
 import { formatBytes } from '../lib/utils';
@@ -101,7 +99,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   const [activeCategory, setActiveCategory] = useState('account');
   const importInputRef = React.useRef<HTMLInputElement>(null);
   const [artworkUrl, setArtworkUrl] = useState(customArtwork || '');
-  const [pendingUsers, setPendingUsers] = useState<{ id: string, email: string }[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<{ id: string; email: string; createdAt?: any }[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   useEffect(() => {
@@ -115,11 +113,29 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     if (!isAdmin) return;
     setIsLoadingUsers(true);
     try {
-      const usersSnapshot = await db.collection('users').where('status', '==', 'pending').orderBy('createdAt', 'desc').get();
-      const usersList = usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        email: doc.data().email || 'No email',
-      }));
+      // Removed .orderBy() to avoid needing a composite index in Firestore.
+      // Sorting will be handled on the client-side.
+      const usersSnapshot = await db.collection('users').where('status', '==', 'pending').get();
+      const usersList = usersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          email: data.email || 'No email',
+          createdAt: data.createdAt || null, // Fetch timestamp for sorting
+        };
+      });
+      
+      // Sort users client-side to show newest first
+      usersList.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          // Firestore Timestamps have a toMillis() method for comparison
+          return b.createdAt.toMillis() - a.createdAt.toMillis();
+        }
+        if (a.createdAt) return -1; // a comes first if b has no date
+        if (b.createdAt) return 1;  // b comes first if a has no date
+        return 0; // No change in order if neither has a date
+      });
+
       setPendingUsers(usersList);
     } catch (error) {
       console.error("Error fetching pending users:", error);
@@ -127,6 +143,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     }
     setIsLoadingUsers(false);
   }, [isAdmin]);
+
 
   useEffect(() => {
     if (isOpen && isAdmin && activeCategory === 'admin') {
