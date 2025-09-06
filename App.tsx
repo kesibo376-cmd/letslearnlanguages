@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -50,6 +51,7 @@ export default function App() {
     totalStorageUsed,
     customArtwork,
     playerLayout,
+    showPlaybackSpeedControl,
     lastPlayedCollectionId,
     language,
   } = useUserData(user?.uid);
@@ -504,6 +506,9 @@ export default function App() {
             onDurationFetch={updatePodcastDuration}
             userId={user.uid}
             layoutMode={playerLayout}
+            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+            showPlaybackSpeedControl={showPlaybackSpeedControl}
+            setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
             />
         )}
         </div>

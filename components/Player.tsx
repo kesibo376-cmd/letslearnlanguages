@@ -1,4 +1,5 @@
 
+
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Podcast, LayoutMode } from '../types';
 import { formatTime } from '../lib/utils';
@@ -7,6 +8,8 @@ import PlayIcon from './icons/PlayIcon';
 import PauseIcon from './icons/PauseIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import RedoIcon from './icons/RedoIcon';
+import SettingsIcon from './icons/SettingsIcon';
+import ToggleSwitch from './ToggleSwitch';
 
 interface PlayerProps {
   podcast: Podcast;
@@ -25,6 +28,9 @@ interface PlayerProps {
   userId: string;
   onDurationFetch: (id: string, duration: number) => void;
   layoutMode: LayoutMode;
+  setPlayerLayout: (layout: LayoutMode) => void;
+  showPlaybackSpeedControl: boolean;
+  setShowPlaybackSpeedControl: (value: boolean) => void;
 }
 
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
@@ -44,12 +50,16 @@ const Player: React.FC<PlayerProps> = ({
   onCurrentTimeUpdate,
   onDurationFetch,
   layoutMode,
+  setPlayerLayout,
+  showPlaybackSpeedControl,
+  setShowPlaybackSpeedControl,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
   const [dragState, setDragState] = useState({ isDragging: false, startY: 0, deltaY: 0 });
   const [audioSrc, setAudioSrc] = useState<string | undefined>(undefined);
   const [isLoadingSrc, setIsLoadingSrc] = useState(true);
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
 
   // --- Audio Loading ---
   useEffect(() => {
@@ -250,9 +260,11 @@ const Player: React.FC<PlayerProps> = ({
           <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
-          <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-3 rounded-md w-24 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
-            {playbackRate}x
-          </button>
+          {showPlaybackSpeedControl && (
+            <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-3 rounded-md w-24 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
+              {playbackRate}x
+            </button>
+          )}
           <button onClick={(e) => handleSkip(10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="forward" />
           </button>
@@ -277,9 +289,11 @@ const Player: React.FC<PlayerProps> = ({
           </div>
         </div>
         <div className="flex items-center justify-center gap-2 w-full max-w-sm">
-          <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-2 rounded-md w-16 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
-            {playbackRate}x
-          </button>
+          {showPlaybackSpeedControl && (
+            <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-2 rounded-md w-16 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
+              {playbackRate}x
+            </button>
+          )}
           <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
@@ -289,7 +303,9 @@ const Player: React.FC<PlayerProps> = ({
           <button onClick={(e) => handleSkip(10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="forward" />
           </button>
-          <div className="w-16" aria-hidden="true" /> {/* Spacer to balance speed button */}
+          {showPlaybackSpeedControl && (
+            <div className="w-16" aria-hidden="true" /> /* Spacer to balance speed button */
+          )}
         </div>
       </div>
   );
@@ -302,11 +318,37 @@ const Player: React.FC<PlayerProps> = ({
         <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} style={expandedPlayerStyle} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
           <div className="absolute inset-0 -z-10 animated-player-bg" style={animatedBackgroundStyle} />
           {layoutMode === 'pimsleur' && artworkUrl && <img src={artworkUrl} alt="" className="absolute inset-0 w-full h-full object-cover -z-20 opacity-20" />}
-          <div className="flex-shrink-0">
-            <button onClick={() => setIsPlayerExpanded(false)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text">
+          
+          <div className="flex-shrink-0 flex justify-between items-center">
+            <button onClick={() => setIsPlayerExpanded(false)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
               <ChevronDownIcon size={32} />
             </button>
+            <button onClick={() => setIsSettingsMenuOpen(true)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 -mr-2">
+              <SettingsIcon size={28} />
+            </button>
           </div>
+
+          {isSettingsMenuOpen && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20 animate-fade-in" onClick={() => setIsSettingsMenuOpen(false)}>
+              <div className="bg-brand-surface rounded-lg p-6 w-full max-w-xs b-border b-shadow animate-scale-in" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-bold text-brand-text">Player Settings</h3>
+                      <button onClick={() => setIsSettingsMenuOpen(false)} className="text-brand-text-secondary hover:text-brand-text text-2xl leading-none">&times;</button>
+                  </div>
+                  <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
+                          <label htmlFor="layout-toggle" className="font-semibold text-brand-text">Circular Player</label>
+                          <ToggleSwitch isOn={layoutMode === 'pimsleur'} handleToggle={() => setPlayerLayout(layoutMode === 'pimsleur' ? 'default' : 'pimsleur')} />
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
+                          <label htmlFor="speed-toggle" className="font-semibold text-brand-text">Show Speed Control</label>
+                          <ToggleSwitch isOn={showPlaybackSpeedControl} handleToggle={() => setShowPlaybackSpeedControl(!showPlaybackSpeedControl)} />
+                      </div>
+                  </div>
+              </div>
+            </div>
+          )}
+
           {layoutMode === 'pimsleur' ? <PimsleurCircularPlayer /> : <DefaultExpandedPlayer />}
         </div>
         
