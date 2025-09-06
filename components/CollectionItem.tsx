@@ -194,7 +194,7 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
         
         <div className="mt-auto pt-2">
             <div className="flex justify-between items-center text-xs text-brand-text-secondary mb-1">
-                <span className="font-semibold text-brand-text">{t('collection.complete', { percentage: Math.round(collection.completionPercentage) })}</span>
+                <span className="font-semibold text-brand-text">{`${Math.round(collection.completionPercentage)}%`}</span>
             </div>
             <div
                 className="w-full bg-brand-surface-light rounded-full h-2 b-border"
