@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, LayoutMode, Language } from '../types';
 import { db } from '../firebase';
@@ -40,7 +39,7 @@ export const getDefaultData = () => ({
         .filter(p => p.collectionName)
         .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
         .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i),
-    title: 'My Audio Library',
+    title: "Bokesi's App",
     theme: 'brutalist' as Theme,
     streakData: DEFAULT_STREAK_DATA,
     hideCompleted: false,
@@ -50,7 +49,7 @@ export const getDefaultData = () => ({
     playOnNavigate: false,
     hasCompletedOnboarding: false,
     customArtwork: null,
-    playerLayout: 'pimsleur' as LayoutMode,
+    playerLayout: 'default' as LayoutMode,
     showPlaybackSpeedControl: true,
     lastPlayedCollectionId: null,
     language: 'en' as Language,

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import FileUpload from './FileUpload';
 import SettingsIcon from './icons/SettingsIcon';
@@ -14,13 +15,17 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ title, onSetTitle, onFileUpload, onOpenSettings, isLoading }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(title);
+  const displayTitle = title === 'My Audio Library' ? "Bokesi's App" : title;
+  const [inputValue, setInputValue] = useState(displayTitle);
   const inputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
-    setInputValue(title);
-  }, [title]);
+    // Keep input value in sync with the displayed title, unless the user is actively editing it.
+    if (!isEditing) {
+        setInputValue(displayTitle);
+    }
+  }, [displayTitle, isEditing]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -31,10 +36,15 @@ const Header: React.FC<HeaderProps> = ({ title, onSetTitle, onFileUpload, onOpen
 
   const handleBlur = () => {
     setIsEditing(false);
-    if (inputValue.trim() && inputValue !== title) {
-      onSetTitle(inputValue);
+    const trimmedValue = inputValue.trim();
+    
+    // Only update if the new value is non-empty and different from the original title.
+    // This also handles the "soft migration" of the old default title to the new one.
+    if (trimmedValue && trimmedValue !== title) {
+      onSetTitle(trimmedValue);
     } else {
-      setInputValue(title);
+      // If no change or input is empty, revert to the currently displayed title.
+      setInputValue(displayTitle);
     }
   };
 
@@ -42,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ title, onSetTitle, onFileUpload, onOpen
     if (e.key === 'Enter') {
       handleBlur();
     } else if (e.key === 'Escape') {
-      setInputValue(title);
+      setInputValue(displayTitle);
       setIsEditing(false);
     }
   };
@@ -62,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ title, onSetTitle, onFileUpload, onOpen
           />
         ) : (
           <h1 className="text-3xl font-bold text-brand-text cursor-pointer truncate" onClick={() => setIsEditing(true)}>
-            {title === 'My Audio Library' ? t('settings.data.storageSub', { size: '' }).split(':')[0] : title}
+            {displayTitle}
           </h1>
         )}
         <button onClick={() => setIsEditing(true)} className="text-brand-text-secondary hover:text-brand-text p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
