@@ -55,29 +55,29 @@ const Player: React.FC<PlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReadyForPlayback, setIsReadyForPlayback] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
 
   const handleAudioError = useCallback(() => {
     console.error(`Failed to load audio source for: ${podcast.name}`);
     alert(`Error: Could not load audio for "${podcast.name}". The source might be unavailable or the format is not supported.`);
     setIsLoading(false);
+    setIsReadyForPlayback(false);
     setIsPlaying(false);
   }, [podcast.name, setIsPlaying]);
 
-  // Main effect for loading a new track
+  // Effect 1: Load the audio source when the podcast changes.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     let objectUrl: string | undefined;
 
-    const setupAndPlay = async () => {
+    const loadSource = async () => {
       setIsLoading(true);
+      setIsReadyForPlayback(false);
       audio.pause();
-      audio.src = '';
 
       let src;
       if (podcast.storage === 'indexeddb') {
@@ -96,47 +96,41 @@ const Player: React.FC<PlayerProps> = ({
       }
 
       audio.src = src;
-      audio.currentTime = currentTime;
       audio.load();
-
-      if (isPlayingRef.current) {
-        try {
-          await audio.play();
-        } catch (error) {
-          console.warn("Autoplay was prevented by browser", error);
-          setIsPlaying(false);
-        }
-      }
     };
 
-    setupAndPlay();
+    loadSource();
 
     return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
-  }, [podcast.id, reloadKey, podcast.storage, podcast.url, currentTime, handleAudioError, setIsPlaying]);
+  }, [podcast.id, podcast.storage, podcast.url, reloadKey, handleAudioError]);
 
-  // Effect for handling user-initiated play/pause toggles
+  // Effect 2: Control playback (play/pause) based on isPlaying state and readiness.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || isLoading) return;
+    if (!audio || !isReadyForPlayback) return;
 
     if (isPlaying) {
       const playPromise = audio.play();
-      if (playPromise) {
-        playPromise.catch(e => {
-            if (e.name !== 'AbortError') {
-              console.error("Play toggle failed", e);
-              setIsPlaying(false);
-            }
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          if (error.name === 'NotAllowedError') {
+            console.warn("Autoplay was prevented by browser.");
+            setIsPlaying(false);
+          } else if (error.name !== 'AbortError') {
+            console.error("Error playing audio:", error);
+          }
         });
       }
     } else {
       audio.pause();
     }
-  }, [isPlaying, isLoading, setIsPlaying]);
+  }, [isPlaying, isReadyForPlayback, setIsPlaying]);
 
-  // --- Audio Properties Effect ---
+  // Effect 3: Sync playback rate to the audio element.
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.playbackRate = playbackRate;
@@ -215,11 +209,23 @@ const Player: React.FC<PlayerProps> = ({
   const handleLoadedMetadata = () => {
     const audio = audioRef.current;
     if (!audio) return;
+    if (isFinite(currentTime)) {
+      audio.currentTime = currentTime;
+    }
     if (!podcast.duration || podcast.duration === 0) onDurationFetch(podcast.id, audio.duration);
     audio.playbackRate = playbackRate;
   };
   
   const handleCanPlay = () => {
+    setIsLoading(false);
+    setIsReadyForPlayback(true);
+  };
+  
+  const handleWaiting = () => {
+    if (isPlaying) setIsLoading(true);
+  };
+
+  const handlePlaying = () => {
     setIsLoading(false);
   };
 
@@ -279,7 +285,7 @@ const Player: React.FC<PlayerProps> = ({
 
   const DefaultExpandedPlayer = () => (
       <div className="flex-grow flex flex-col items-center justify-center text-center gap-6 sm:gap-8">
-        <div className={`w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-brand-surface rounded-lg shadow-2xl overflow-hidden b-border b-shadow transition-transform ${isPlaying ? 'animate-pulse-slow' : ''}`}>
+        <div className={`w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-brand-surface rounded-lg shadow-2xl overflow-hidden b-border b-shadow transition-transform ${isPlaying && !isLoading ? 'animate-pulse-slow' : ''}`}>
           <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-brand-text">{podcast.name}</h2>
@@ -301,7 +307,7 @@ const Player: React.FC<PlayerProps> = ({
           <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
-          <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
+          <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading && !isReadyForPlayback} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
              {isLoading ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -327,6 +333,8 @@ const Player: React.FC<PlayerProps> = ({
         onEnded={handleAudioEnded}
         onLoadedMetadata={handleLoadedMetadata}
         onCanPlay={handleCanPlay}
+        onWaiting={handleWaiting}
+        onPlaying={handlePlaying}
         onError={handleAudioError}
         preload="metadata"
       />
@@ -390,7 +398,7 @@ const Player: React.FC<PlayerProps> = ({
               <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
                 <RedoIcon size={20} className="backward -scale-x-100" />
               </button>
-              <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
+              <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading && !isReadyForPlayback} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
                 {isLoading ? (
                   <svg className="animate-spin h-5 w-5 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
