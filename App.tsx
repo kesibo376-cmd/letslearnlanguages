@@ -1,3 +1,7 @@
+
+
+
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -5,6 +9,7 @@ import { useAuth } from './hooks/useAuth';
 import { useUserData } from './hooks/useUserData';
 import { v4 as uuidv4 } from 'uuid';
 import * as db from './lib/db';
+import { db as firestore } from './firebase';
 
 import Player from './components/Player';
 import AuthForm from './components/AuthForm';
@@ -135,43 +140,41 @@ export default function App() {
     };
 
     const fetchAllDurations = async () => {
-      const CONCURRENCY_LIMIT = 6;
-      const queue = [...podcastsToUpdate];
-      const validResults: { id: string; duration: number }[] = [];
-
-      const worker = async () => {
-        while (true) {
-          const podcast = queue.shift();
-          if (!podcast) {
-            break; // No more items in queue
-          }
-          const result = await fetchDurationForPodcast(podcast);
-          if (result && !isNaN(result.duration) && result.duration > 0) {
-            validResults.push(result);
-          }
-        }
-      };
-
-      const workers = Array(CONCURRENCY_LIMIT).fill(null).map(worker);
-      await Promise.all(workers);
+      const promises = podcastsToUpdate.map(fetchDurationForPodcast);
+      const results = await Promise.allSettled(promises);
 
       // Unmark from fetching so they can be retried if they failed
       podcastsToUpdate.forEach(p => fetchingDurationsRef.current.delete(p.id));
 
+      const validResults: { id: string, duration: number }[] = [];
+      results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value) {
+          if (!isNaN(result.value.duration) && result.value.duration > 0) {
+            validResults.push(result.value);
+          }
+        }
+      });
+
       if (validResults.length > 0) {
         console.log(`[Duration Fetch] Successfully fetched ${validResults.length} durations.`);
-        // The `podcasts` variable from the useEffect's scope is the state that triggered this fetch.
-        // We will create the new state based on it, which is safer than re-fetching from Firestore
-        // and creating a race condition. The `useUserData` hook's `onSnapshot` listener
-        // will handle merging any other concurrent changes.
-        const durationMap = new Map(validResults.map(item => [item.id, item.duration]));
-        const updatedPodcasts = podcasts.map((p: Podcast) => {
-            if (durationMap.has(p.id)) {
-                return { ...p, duration: durationMap.get(p.id)! };
-            }
-            return p;
-        });
-        updateUserData({ podcasts: updatedPodcasts });
+        try {
+          const docRef = firestore.collection('users').doc(user.uid);
+          const docSnap = await docRef.get();
+          if (docSnap.exists) {
+            const latestData = docSnap.data();
+            const latestPodcasts = latestData.podcasts || [];
+            const updatedPodcasts = latestPodcasts.map((p: Podcast) => {
+              const found = validResults.find(r => r.id === p.id);
+              if (found) {
+                return { ...p, duration: found.duration };
+              }
+              return p;
+            });
+            updateUserData({ podcasts: updatedPodcasts });
+          }
+        } catch (error) {
+          console.error("[Duration Fetch] Error getting latest user data to update durations:", error);
+        }
       }
     };
 
