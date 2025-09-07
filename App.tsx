@@ -702,6 +702,7 @@ export default function App() {
             completionSound={completionSound}
             setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
             useCollectionsView={useCollectionsView}
+            setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
             playOnNavigate={playOnNavigate}
             setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
             playerLayout={playerLayout}

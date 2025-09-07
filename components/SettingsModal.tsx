@@ -38,6 +38,8 @@ interface SettingsModalProps {
   onImportData: (file: File) => void;
   completionSound: CompletionSound;
   onSetCompletionSound: (sound: CompletionSound) => void;
+  useCollectionsView: boolean;
+  onSetUseCollectionsView: (value: boolean) => void;
   playOnNavigate: boolean;
   onSetPlayOnNavigate: (value: boolean) => void;
   playerLayout: LayoutMode;
@@ -84,6 +86,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     streakData, onSetStreakData, hideCompleted, onSetHideCompleted, reviewModeEnabled,
     onSetReviewModeEnabled, customArtwork, onSetCustomArtwork, onExportData,
     onImportData, completionSound, onSetCompletionSound,
+    useCollectionsView, onSetUseCollectionsView,
     playOnNavigate, onSetPlayOnNavigate, totalStorageUsed,
     user, onLogout, playerLayout, onSetPlayerLayout, onUpdatePreloadedData
   } = props;
@@ -280,6 +283,12 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   const FeaturesSection = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-brand-text border-b border-brand-surface-light pb-2">{t('settings.categories.features')}</h3>
+      <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
+        <div><p className="font-semibold">{t('settings.features.collections')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.collectionsSub')}</p></div>
+        <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+            <ToggleSwitch isOn={useCollectionsView} handleToggle={() => onSetUseCollectionsView(!useCollectionsView)} />
+        </div>
+      </div>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
         <div><p className="font-semibold">{t('settings.features.streak')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.streakSub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>

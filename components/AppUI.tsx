@@ -50,6 +50,7 @@ interface AppUIProps {
     completionSound: CompletionSound;
     setCompletionSound: (sound: CompletionSound) => void;
     useCollectionsView: boolean;
+    setUseCollectionsView: (value: boolean) => void;
     playOnNavigate: boolean;
     setPlayOnNavigate: (value: boolean) => void;
     playerLayout: LayoutMode;
@@ -101,7 +102,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     setIsPlaying, setIsPlayerExpanded, updatePodcastProgress, handlePlaybackEnd, customArtwork, playbackRate,
     setPlaybackRate, activePlayerTime, setActivePlayerTime, isSettingsOpen, setIsSettingsOpen, hideCompleted,
     setHideCompleted, reviewModeEnabled, setReviewModeEnabled, completionSound, setCompletionSound, useCollectionsView,
-    playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, lastPlayedCollectionId, setLastPlayedCollectionId, handleSetCustomArtwork, dataToExport, theme,
+    setUseCollectionsView, playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, lastPlayedCollectionId, setLastPlayedCollectionId, handleSetCustomArtwork, dataToExport, theme,
     setTheme, setLanguage, setStreakData, setPodcasts, setCollections, unrecordCompletion, recordCompletion,
     allPodcastsSorted, podcastsInCurrentView, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
@@ -298,6 +299,8 @@ const AppUI: React.FC<AppUIProps> = (props) => {
           onImportData={onImportData}
           completionSound={completionSound}
           onSetCompletionSound={setCompletionSound}
+          useCollectionsView={useCollectionsView}
+          onSetUseCollectionsView={setUseCollectionsView}
           playOnNavigate={playOnNavigate}
           onSetPlayOnNavigate={setPlayOnNavigate}
           playerLayout={playerLayout}
