@@ -426,15 +426,15 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       aria-hidden={!isOpen}
     >
       <div 
-        className={`bg-brand-surface rounded-lg shadow-2xl p-6 w-full max-w-sm md:max-w-3xl lg:max-w-4xl b-border b-shadow mx-auto my-8 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+        className={`bg-brand-surface rounded-lg shadow-2xl p-6 w-full max-w-sm md:max-w-3xl lg:max-w-4xl b-border b-shadow mx-auto my-8 transition-all duration-300 ease-in-out ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} flex flex-col max-h-[calc(100vh-4rem)]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <h2 id="settings-title" className="text-xl font-bold text-brand-text">{t('settings.title')}</h2>
           <button onClick={onClose} aria-label="Close settings" className="text-brand-text-secondary hover:text-brand-text text-3xl leading-none">&times;</button>
         </div>
         
-        <div className="md:flex md:gap-8">
+        <div className="md:flex md:gap-8 flex-grow min-h-0">
             {/* Desktop Navigation */}
             <aside className="hidden md:block w-48 flex-shrink-0">
                 <nav className="space-y-1">
@@ -457,9 +457,9 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             
             <div className="flex-grow min-w-0">
               {/* Mobile View */}
-              <div className="md:hidden max-h-[calc(100vh-150px)]">
+              <div className="md:hidden h-full">
                   {mobileView === 'list' ? (
-                      <nav className="space-y-2 animate-fade-in">
+                      <nav className="space-y-2 animate-fade-in h-full overflow-y-auto">
                           {CATEGORIES.map(cat => (
                               <button
                                   key={cat.id}
@@ -507,4 +507,3 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 };
 
 export default SettingsModal;
-///changes 
