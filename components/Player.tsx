@@ -351,7 +351,16 @@ const Player: React.FC<PlayerProps> = ({
 
   return (
     <>
-      <audio ref={audioRef} src={audioSrc} onTimeUpdate={handleTimeUpdate} onEnded={handleAudioEnded} onLoadedMetadata={handleLoadedMetadata} onError={handleAudioError} preload="metadata" />
+      <audio
+        ref={audioRef}
+        src={audioSrc}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleAudioEnded}
+        onLoadedMetadata={handleLoadedMetadata}
+        onError={handleAudioError}
+        preload="metadata"
+        autoPlay={isPlaying}
+      />
       <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
         {/* Expanded Player */}
         <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} onTouchMove={handleTouchMove}>
