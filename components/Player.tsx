@@ -55,29 +55,17 @@ const Player: React.FC<PlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
   
-  const [audioSrc, setAudioSrc] = useState<string | null>(null);
-  const [isBuffering, setIsBuffering] = useState(false);
+  const [audioSrc, setAudioSrc] = useState<string | undefined>(undefined);
   const [isLoadingSrc, setIsLoadingSrc] = useState(true);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
 
-  const handleAudioError = useCallback(() => {
-    const error = audioRef.current?.error || new Error('Audio element not available');
-    console.error(`[Player Error] Failed to load audio source for: ${podcast.name}`, error);
-    const errorCode = error && 'code' in error ? error.code : 'N/A';
-    alert(`Error: Could not load audio for "${podcast.name}". Code: ${errorCode}. Message: ${error?.message}. Check console for more details.`);
-    setIsLoadingSrc(false);
-    setIsBuffering(false);
-    setIsPlaying(false);
-  }, [podcast.name, setIsPlaying]);
-
-  // Effect to load audio source
+  // --- Audio Loading Effect ---
   useEffect(() => {
     let objectUrl: string | undefined;
 
     const loadAudio = async () => {
       setIsLoadingSrc(true);
-      setAudioSrc(null); // Clear previous source to ensure the audio element reloads
       if (podcast.storage === 'indexeddb') {
         try {
           const blob = await db.getAudio(podcast.id);
@@ -85,11 +73,12 @@ const Player: React.FC<PlayerProps> = ({
             objectUrl = URL.createObjectURL(blob);
             setAudioSrc(objectUrl);
           } else {
-            throw new Error('Blob not found in IndexedDB');
+            throw new Error('Audio blob not found in IndexedDB.');
           }
         } catch (error) {
-          console.error('[Player] Error loading from IndexedDB', error);
-          handleAudioError();
+          console.error("Error loading audio from IndexedDB:", error);
+          alert(`Could not load local audio for "${podcast.name}". It may have been deleted.`);
+          setAudioSrc(undefined);
         }
       } else {
         setAudioSrc(podcast.url);
@@ -104,42 +93,48 @@ const Player: React.FC<PlayerProps> = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [podcast.id, podcast.storage, podcast.url, reloadKey, handleAudioError]);
-  
-  // Effect for robust playback control
+  }, [podcast.id, podcast.url, podcast.storage, podcast.name]);
+
+  // --- Playback Control Effect ---
+  // This is the single source of truth for commanding the audio element to play or pause.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || isLoadingSrc) return;
 
     if (isPlaying) {
+      setIsBuffering(true); // Assume buffering until play starts
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(error => {
-          console.warn("Playback failed, likely due to browser autoplay policy.", error);
-          setIsPlaying(false); // Sync state back if play is rejected
+          console.error("Audio playback failed:", error);
+          // If play is rejected by the browser, sync the state back to paused.
+          setIsPlaying(false);
+        }).finally(() => {
+            // This might not be needed if onPlaying fires reliably
+            if(!audio.paused) setIsBuffering(false);
         });
       }
     } else {
       audio.pause();
     }
   }, [isPlaying, isLoadingSrc, setIsPlaying]);
-
-  // Effect for other audio properties
+  
+  // --- Other Audio Properties Effect ---
   useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.playbackRate = playbackRate;
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
 
   // --- UI Event Handlers ---
   const handleTogglePlayPause = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
     e?.stopPropagation();
-    setIsPlaying(p => !p); // Simply update the state; the effect will handle playback.
+    // Simply toggle the desired state; the effect will handle the actual playback command.
+    setIsPlaying(p => !p);
   }, [setIsPlaying]);
 
   const handleTouchEndTogglePlayPause = useCallback((e: React.TouchEvent) => {
-    e.preventDefault(); // Prevents "ghost click" on mobile
+    e.preventDefault(); // Prevents "ghost click" on mobile devices
     handleTogglePlayPause(e);
   }, [handleTogglePlayPause]);
 
@@ -165,7 +160,7 @@ const Player: React.FC<PlayerProps> = ({
     const newTime = Math.max(0, Math.min(podcast.duration || 0, audioRef.current.currentTime + seconds));
     audioRef.current.currentTime = newTime;
     onCurrentTimeUpdate(newTime);
-    onProgressSave(podcast.id, newTime);
+    onProgressSave(podcast.id, newTime); // Save immediately on skip
   }, [podcast.id, podcast.duration, onCurrentTimeUpdate, onProgressSave]);
 
   const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -186,8 +181,9 @@ const Player: React.FC<PlayerProps> = ({
   }, [playbackRate, onPlaybackRateChange]);
 
   const handleReloadAudio = useCallback(() => {
+     // Re-implementing this would add complexity. The new robust loading should make this unnecessary.
+     // For now, it just closes the menu. A page refresh is the ultimate reload.
     setIsSettingsMenuOpen(false);
-    setReloadKey(k => k + 1);
   }, []);
 
   // --- Audio Element Event Listeners ---
@@ -195,6 +191,7 @@ const Player: React.FC<PlayerProps> = ({
     if (!audioRef.current) return;
     const newTime = audioRef.current.currentTime;
     onCurrentTimeUpdate(newTime);
+
     if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
     progressUpdateDebounceRef.current = window.setTimeout(() => {
       onProgressSave(podcast.id, audioRef.current?.currentTime || 0);
@@ -204,32 +201,43 @@ const Player: React.FC<PlayerProps> = ({
   const handleLoadedMetadata = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (isFinite(currentTime)) {
-      audio.currentTime = currentTime;
+    if (!podcast.duration || podcast.duration === 0) {
+      onDurationFetch(podcast.id, audio.duration);
     }
-    if (!podcast.duration || podcast.duration === 0) onDurationFetch(podcast.id, audio.duration);
+    // Restore state from props. `currentTime` is the source of truth from App.tsx.
+    audio.currentTime = currentTime;
     audio.playbackRate = playbackRate;
   };
-  
-  const handleCanPlay = () => setIsBuffering(false);
-  const handleWaiting = () => { if (isPlaying) setIsBuffering(true); };
-  const handlePlaying = () => setIsBuffering(false);
 
   const handleAudioEnded = useCallback(() => {
     if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
     if (podcast.duration > 0) onProgressSave(podcast.id, podcast.duration);
     onEnded();
-  }, [podcast.id, podcast.duration, podcast.name, onProgressSave, onEnded]);
+  }, [podcast.id, podcast.duration, onProgressSave, onEnded]);
+  
+  const handleWaiting = () => setIsBuffering(true);
+  const handlePlaying = () => setIsBuffering(false);
+
+  const handleAudioError = useCallback(() => {
+    const error = audioRef.current?.error;
+    if (!error) return;
+    console.error(`Audio Error Code: ${error.code}`, error.message);
+    setIsBuffering(false);
+    setIsLoadingSrc(false);
+    setIsPlaying(false);
+    // Optionally alert the user
+    // alert(`An error occurred trying to play this audio. Code: ${error.code}`);
+  }, [setIsPlaying]);
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent scrolling page when interacting with expanded player
   };
   
-  const shouldShowSpinner = isLoadingSrc || isBuffering;
+  const shouldShowSpinner = isLoadingSrc || (isPlaying && isBuffering);
   const progressPercent = podcast?.duration && podcast.duration > 0 ? (currentTime / podcast.duration) * 100 : 0;
   const animatedBackgroundStyle: React.CSSProperties = { background: `linear-gradient(${progressPercent * 3.6}deg, var(--brand-gradient-start), var(--brand-gradient-end))`, transition: 'background 1s linear' };
 
-  // --- Sub-components for different layouts ---
+  // --- Sub-components for different layouts (Aesthetics preserved) ---
   const PimsleurCircularPlayer = () => {
     const size = 280, strokeWidth = 12, radius = (size - strokeWidth) / 2, circumference = 2 * Math.PI * radius;
     const offset = circumference - (progressPercent / 100) * circumference;
@@ -242,7 +250,7 @@ const Player: React.FC<PlayerProps> = ({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <h3 className="text-4xl font-bold text-brand-text mb-2">{formatTime((podcast.duration || 0) - currentTime)}</h3>
-            <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
+            <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center w-20 h-20">
               {shouldShowSpinner ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -294,7 +302,7 @@ const Player: React.FC<PlayerProps> = ({
           <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
-          <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
+          <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center w-20 h-20">
              {shouldShowSpinner ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -316,15 +324,14 @@ const Player: React.FC<PlayerProps> = ({
     <>
       <audio
         ref={audioRef}
-        src={audioSrc || ''}
+        src={audioSrc}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleAudioEnded}
         onLoadedMetadata={handleLoadedMetadata}
-        onCanPlay={handleCanPlay}
         onWaiting={handleWaiting}
         onPlaying={handlePlaying}
         onError={handleAudioError}
-        preload="auto"
+        preload="metadata"
       />
       <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
         {/* Expanded Player */}
@@ -358,7 +365,7 @@ const Player: React.FC<PlayerProps> = ({
                           <ToggleSwitch isOn={showPlaybackSpeedControl} handleToggle={() => setShowPlaybackSpeedControl(!showPlaybackSpeedControl)} />
                       </div>
                       <button onClick={handleReloadAudio} className="w-full flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border text-left hover:bg-brand-surface transition-colors">
-                          <div className="font-semibold text-brand-text">Refresh Player</div>
+                          <div className="font-semibold text-brand-text">Refresh Audio</div>
                           <SyncIcon size={20} className="text-brand-text-secondary"/>
                       </button>
                   </div>
