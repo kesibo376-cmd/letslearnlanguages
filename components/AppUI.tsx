@@ -444,7 +444,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
 
                     {playerLayout !== 'pimsleur' && totalCount > 0 && !showCollections && <StatusBar listenedCount={listenedCount} totalCount={totalCount} percentage={percentage} />}
                     
-                    <div className={`mt-4 ${playerLayout !== 'pimsleur' ? 'bg-brand-surface rounded-lg shadow-lg b-border b-shadow overflow-hidden' : ''}`}>
+                    <div className={`mt-4 ${playerLayout !== 'pimsleur' ? 'bg-brand-surface rounded-lg shadow-lg b-border b-shadow' : ''}`}>
                         {visiblePodcasts.length > 0 ? (
                             <PodcastList
                                 podcasts={visiblePodcasts}
