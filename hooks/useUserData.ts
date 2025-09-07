@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, LayoutMode, Language } from '../types';
 import { db } from '../firebase';
@@ -19,8 +20,9 @@ export const getDefaultData = () => ({
       const fileName = urlParts[urlParts.length - 1];
       let name = decodeURIComponent(fileName).replace(/\.[^/.]+$/, "");
 
-      if (item.collectionName === 'Spanish I' && /^\d+$/.test(name)) {
-        name = `Spanish I ${name}`;
+      // If the name is purely numeric, prepend the collection name for clarity
+      if (item.collectionName && /^\d+$/.test(name)) {
+        name = `${item.collectionName} ${name}`;
       }
 
       return {
