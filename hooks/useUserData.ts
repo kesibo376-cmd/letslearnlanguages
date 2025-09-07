@@ -14,16 +14,26 @@ const DEFAULT_STREAK_DATA: StreakData = {
 };
 
 export const getDefaultData = () => ({
-    podcasts: PRELOADED_PODCAST_URLS.map((item, index) => ({
-      id: `preloaded-${index}`,
-      name: `Preloaded Audio ${index + 1}`,
-      url: item.url,
-      duration: 0, // Will be fetched on playback
-      progress: 0,
-      isListened: false,
-      storage: 'preloaded' as const,
-      collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
-    })),
+    podcasts: PRELOADED_PODCAST_URLS.map((item, index) => {
+      const urlParts = item.url.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      let name = decodeURIComponent(fileName).replace(/\.[^/.]+$/, "");
+
+      if (item.collectionName === 'Spanish I' && /^\d+$/.test(name)) {
+        name = `Spanish I ${name}`;
+      }
+
+      return {
+        id: `preloaded-${index}`,
+        name: name || `Preloaded Audio ${index + 1}`, // fallback
+        url: item.url,
+        duration: 0, // Will be fetched on playback
+        progress: 0,
+        isListened: false,
+        storage: 'preloaded' as const,
+        collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
+      };
+    }),
     collections: PRELOADED_PODCAST_URLS
         .filter(p => p.collectionName)
         .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
