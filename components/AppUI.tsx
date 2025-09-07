@@ -1,4 +1,5 @@
-import React, { useMemo, useCallback, useState } from 'react';
+
+import React, { useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode, Language } from '../types';
 import { useTranslation } from '../contexts/LanguageContext';
@@ -13,11 +14,11 @@ import ReviewModal from './ReviewModal';
 import CategorizeModal from './CategorizeModal';
 import CreateCollectionModal from './CreateCollectionModal';
 import ClearDataModal from './ClearDataModal';
+import Player from './Player';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlayCircleIcon from './icons/PlayCircleIcon';
 import PlusIcon from './icons/PlusIcon';
 
-// Define the props for AppUI
 interface AppUIProps {
     user: User;
     onLogout: () => void;
@@ -29,17 +30,14 @@ interface AppUIProps {
     streakData: StreakData;
     isTodayComplete: boolean;
     currentPodcastId: string | null;
+    currentPodcast: Podcast | undefined;
     isPlaying: boolean;
     isPlayerExpanded: boolean;
-    setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
     setIsPlayerExpanded: React.Dispatch<React.SetStateAction<boolean>>;
-    updatePodcastProgress: (id: string, progress: number) => void;
-    handlePlaybackEnd: () => void;
     customArtwork: string | null;
     playbackRate: number;
     setPlaybackRate: React.Dispatch<React.SetStateAction<number>>;
     activePlayerTime: number;
-    setActivePlayerTime: React.Dispatch<React.SetStateAction<number>>;
     isSettingsOpen: boolean;
     setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
     hideCompleted: boolean;
@@ -71,7 +69,6 @@ interface AppUIProps {
     reviewPrompt: { show: boolean; podcastToReview: Podcast | null; podcastToPlay: Podcast | null; };
     setReviewPrompt: React.Dispatch<React.SetStateAction<{ show: boolean; podcastToReview: Podcast | null; podcastToPlay: Podcast | null; }>>;
     setNextPodcastOnEnd: React.Dispatch<React.SetStateAction<string | null>>;
-    startPlayback: (id: string) => void;
     isCategorizeModalOpen: boolean;
     setIsCategorizeModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     podcastsToCategorize: Podcast[];
@@ -82,7 +79,8 @@ interface AppUIProps {
     setCurrentView: React.Dispatch<React.SetStateAction<string | null>>;
     isClearDataModalOpen: boolean;
     setIsClearDataModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    isLoading: boolean;
+    isLoading: boolean; // For file uploads
+    isPlaybackLoading: boolean; // For audio playback
     onFileUpload: (files: FileList) => void;
     onDeletePodcast: (id: string) => void;
     onDeleteCollection: (id: string) => void;
@@ -92,21 +90,28 @@ interface AppUIProps {
     onClearAll: () => void;
     onUpdatePreloadedData: () => void;
     totalStorageUsed: number;
+    onSelectPodcast: (id: string) => void;
+    onTogglePlayPause: () => void;
+    onSkip: (seconds: number) => void;
+    onSeek: (newTime: number) => void;
+    showPlaybackSpeedControl: boolean;
+    setShowPlaybackSpeedControl: (value: boolean) => void;
 }
 
 const AppUI: React.FC<AppUIProps> = (props) => {
   const {
     user, onLogout, onImportData, podcasts, collections,
-    title, setTitle, streakData, isTodayComplete, currentPodcastId, isPlaying, isPlayerExpanded,
-    setIsPlaying, setIsPlayerExpanded, updatePodcastProgress, handlePlaybackEnd, customArtwork, playbackRate,
-    setPlaybackRate, activePlayerTime, setActivePlayerTime, isSettingsOpen, setIsSettingsOpen, hideCompleted,
+    title, setTitle, streakData, isTodayComplete, currentPodcastId, currentPodcast, isPlaying, isPlayerExpanded,
+    setIsPlayerExpanded, customArtwork, playbackRate,
+    setPlaybackRate, activePlayerTime, isSettingsOpen, setIsSettingsOpen, hideCompleted,
     setHideCompleted, reviewModeEnabled, setReviewModeEnabled, completionSound, setCompletionSound, useCollectionsView,
     setUseCollectionsView, playOnNavigate, setPlayOnNavigate, playerLayout, setPlayerLayout, lastPlayedCollectionId, setLastPlayedCollectionId, handleSetCustomArtwork, dataToExport, theme,
     setTheme, setLanguage, setStreakData, setPodcasts, setCollections, unrecordCompletion, recordCompletion,
-    allPodcastsSorted, podcastsInCurrentView, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
+    allPodcastsSorted, podcastsInCurrentView, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
     setIsCreateCollectionModalOpen, currentView, setCurrentView, isClearDataModalOpen,
-    setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onDeleteCollection, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, onUpdatePreloadedData, totalStorageUsed
+    setIsClearDataModalOpen, isLoading, isPlaybackLoading, onFileUpload, onDeletePodcast, onDeleteCollection, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, onUpdatePreloadedData, totalStorageUsed,
+    onSelectPodcast, onTogglePlayPause, onSkip, onSeek, showPlaybackSpeedControl, setShowPlaybackSpeedControl
   } = props;
 
   const { t } = useTranslation();
@@ -152,24 +157,6 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     linkElement.click();
   };
   
-  const handleSelectPodcast = useCallback((id: string) => {
-    const selectedPodcast = podcasts.find(p => p.id === id);
-    if (!selectedPodcast) return;
-
-    if (id === currentPodcastId) {
-      setIsPlaying(!isPlaying);
-    } else {
-      const previouslyListened = allPodcastsSorted.filter(p => p.isListened && p.id !== id);
-      const lastListened = previouslyListened[previouslyListened.length - 1];
-
-      if (reviewModeEnabled && lastListened) {
-        setReviewPrompt({ show: true, podcastToReview: lastListened, podcastToPlay: selectedPodcast });
-      } else {
-        startPlayback(id);
-      }
-    }
-  }, [currentPodcastId, isPlaying, podcasts, allPodcastsSorted, reviewModeEnabled, setIsPlaying, setReviewPrompt, startPlayback]);
-
   const handleTogglePodcastComplete = useCallback((id: string) => {
     let wasCompleted = false;
     const updatedPodcasts = podcasts.map(p => {
@@ -222,7 +209,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
      setLastPlayedCollectionId(collectionId);
      const podcastsInCollection = allPodcastsSorted.filter(p => p.collectionId === collectionId && !p.isListened);
      if (podcastsInCollection.length > 0) {
-        startPlayback(podcastsInCollection[0].id);
+        onSelectPodcast(podcastsInCollection[0].id);
      } else {
         alert("No unplayed audio in this collection.");
      }
@@ -245,12 +232,12 @@ const AppUI: React.FC<AppUIProps> = (props) => {
   
   const handleResetCollectionProgress = useCallback((collectionId: string | null) => {
     const podcastsToReset = podcasts.filter(p => {
-        if (collectionId === 'uncategorized') return p.collectionId === null;
+        if (collectionId === null) return p.collectionId === null; // Handle uncategorized explicitly
         return p.collectionId === collectionId;
     });
 
     const updatedPodcasts = podcasts.map(p => {
-        const shouldReset = (collectionId === 'uncategorized' && p.collectionId === null) || p.collectionId === collectionId;
+        const shouldReset = (collectionId === null && p.collectionId === null) || p.collectionId === collectionId;
         if (shouldReset) {
             return { ...p, progress: 0, isListened: false };
         }
@@ -316,13 +303,13 @@ const AppUI: React.FC<AppUIProps> = (props) => {
         onConfirm={() => {
           if (reviewPrompt.podcastToReview && reviewPrompt.podcastToPlay) {
             setNextPodcastOnEnd(reviewPrompt.podcastToPlay.id);
-            startPlayback(reviewPrompt.podcastToReview.id);
+            onSelectPodcast(reviewPrompt.podcastToReview.id);
           }
           setReviewPrompt({ show: false, podcastToReview: null, podcastToPlay: null });
         }}
         onCancel={() => {
           if (reviewPrompt.podcastToPlay) {
-            startPlayback(reviewPrompt.podcastToPlay.id);
+            onSelectPodcast(reviewPrompt.podcastToPlay.id);
           }
           setReviewPrompt({ show: false, podcastToReview: null, podcastToPlay: null });
         }}
@@ -380,17 +367,19 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                           podcasts={podcasts}
                           onNavigateToCollection={(id) => {
                             setCurrentView(id);
-                            const podcastsInCollection = podcasts.filter(p => id === 'uncategorized' ? p.collectionId === null : p.collectionId === id);
-                            const firstUnplayed = podcastsInCollection.find(p => !p.isListened);
-                            if (playOnNavigate && firstUnplayed) {
-                                startPlayback(firstUnplayed.id);
+                            if (playOnNavigate) {
+                                const collectionId = id === 'uncategorized' ? null : id;
+                                const firstUnplayed = allPodcastsSorted.find(p => p.collectionId === collectionId && !p.isListened);
+                                if (firstUnplayed) {
+                                    onSelectPodcast(firstUnplayed.id);
+                                }
                             }
                             window.scrollTo(0, 0);
                           }}
                           onPlayCollection={handlePlayCollection}
                           onRenameCollection={handleRenameCollection}
                           onDeleteCollection={onDeleteCollection}
-                          onResetCollectionProgress={handleResetCollectionProgress}
+                          onResetCollectionProgress={(id) => handleResetCollectionProgress(id === 'uncategorized' ? null : id)}
                           onSetCollectionArtwork={handleSetCollectionArtwork}
                           lastPlayedCollectionId={lastPlayedCollectionId}
                           theme={theme}
@@ -409,19 +398,14 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                               )}
                           </div>
                           <h2 className="flex-shrink text-xl font-bold text-brand-text text-center truncate">{currentCollectionName || t('main.allAudio')}</h2>
-                          <div className="flex-1 flex justify-end">
-                            {/* The view mode toggle was here and has been removed. */}
-                          </div>
+                          <div className="flex-1 flex justify-end" />
                       </div>
 
                     {firstUnplayedInView && (
                       <div className="my-4">
                         <button
-                          onClick={() => startPlayback(firstUnplayedInView.id)}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            startPlayback(firstUnplayedInView.id);
-                          }}
+                          onClick={() => onSelectPodcast(firstUnplayedInView.id)}
+                          onTouchEnd={(e) => { e.preventDefault(); onSelectPodcast(firstUnplayedInView.id); }}
                           className="w-full flex items-center justify-center gap-3 text-lg py-3 px-6 bg-brand-primary text-brand-text-on-primary rounded-lg b-border b-shadow b-shadow-hover transition-transform transform hover:scale-[1.02] active:scale-[0.98]"
                         >
                           <PlayCircleIcon size={24} />
@@ -438,7 +422,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                                 podcasts={visiblePodcasts}
                                 currentPodcastId={currentPodcastId}
                                 isPlaying={isPlaying}
-                                onSelectPodcast={handleSelectPodcast}
+                                onSelectPodcast={onSelectPodcast}
                                 onDeletePodcast={onDeletePodcast}
                                 onTogglePodcastComplete={handleTogglePodcastComplete}
                                 onMovePodcastToCollection={handleMovePodcastToCollection}
@@ -462,6 +446,30 @@ const AppUI: React.FC<AppUIProps> = (props) => {
               </div>
           </main>
       </div>
+       {currentPodcast && (
+            <Player
+                podcast={currentPodcast}
+                isPlaying={isPlaying}
+                isPlayerExpanded={isPlayerExpanded}
+                setIsPlayerExpanded={setIsPlayerExpanded}
+                artworkUrl={
+                  (useCollectionsView &&
+                    collections.find(c => c.id === currentPodcast.collectionId)?.artworkUrl
+                  ) || customArtwork
+                }
+                playbackRate={playbackRate}
+                onPlaybackRateChange={setPlaybackRate}
+                currentTime={activePlayerTime}
+                layoutMode={playerLayout}
+                setPlayerLayout={setPlayerLayout}
+                showPlaybackSpeedControl={showPlaybackSpeedControl}
+                setShowPlaybackSpeedControl={setShowPlaybackSpeedControl}
+                isLoading={isPlaybackLoading}
+                onTogglePlayPause={onTogglePlayPause}
+                onSkip={onSkip}
+                onSeek={onSeek}
+            />
+        )}
     </>
   );
 };

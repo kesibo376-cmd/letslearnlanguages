@@ -5,19 +5,19 @@ import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty
 import { useTheme } from './hooks/useTheme';
 import { useAuth } from './hooks/useAuth';
 import { useUserData, getDefaultData } from './hooks/useUserData';
-// Fix: Import the useStreak hook to resolve the 'Cannot find name' error.
 import { useStreak } from './hooks/useStreak';
 import { v4 as uuidv4 } from 'uuid';
 import * as db from './lib/db';
 import { db as firestore } from './firebase';
 
-import Player from './components/Player';
-import AuthForm from './components/AuthForm';
 import AppUI from './components/AppUI';
+// Fix: Import AuthForm component to resolve 'Cannot find name' error.
+import AuthForm from './components/AuthForm';
 import Confetti from './components/Confetti';
 import { LanguageProvider } from './contexts/LanguageContext';
 import OnboardingModal from './components/OnboardingModal';
 import DebugOverlay from './components/DebugOverlay';
+import { useDebug } from './contexts/DebugContext';
 
 const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none' | 'random'>, string> = {
   minecraft: 'https://www.myinstants.com/media/sounds/levelup.mp3',
@@ -78,7 +78,7 @@ export default function App() {
 
   const [currentPodcastId, setCurrentPodcastId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false); // For file uploads
   const [isPlayerExpanded, setIsPlayerExpanded] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const soundAudioRef = useRef<HTMLAudioElement>(null);
@@ -96,8 +96,21 @@ export default function App() {
   const [isMinLoadTimeMet, setIsMinLoadTimeMet] = useState(false);
   const [isDebugMode, setIsDebugMode] = useState(false);
 
+  // --- NEW: Centralized Audio Control ---
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
+  // Fix: The error "Expected 1 arguments, but got 0" on line 99 likely refers to this line.
+  // The useRef hook requires an initial value.
+  const audioSrcRef = useRef<string | undefined>(undefined);
+  const { log } = useDebug();
+  const [isPlaybackLoading, setIsPlaybackLoading] = useState(false);
+  const [audioSrc, setAudioSrc] = useState<string | undefined>();
+
   useEffect(() => {
-    // Check for debug mode on initial load
+    audioSrcRef.current = audioSrc;
+  }, [audioSrc]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('debug') === 'true') {
       setIsDebugMode(true);
@@ -105,22 +118,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Enforce a minimum loading time to prevent screen flicker on fast loads.
     const timer = setTimeout(() => {
       setIsMinLoadTimeMet(true);
-    }, 1000); // 1 second
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    // App is ready if auth is done and we either have no user (login screen)
-    // or we have a user and their data is loaded.
     if (!isAuthLoading && (!user || (user && !isDataLoading))) {
         setIsAppReady(true);
     }
   }, [isAuthLoading, user, isDataLoading]);
 
-  // Effect to lock body scroll when modals are open
   useEffect(() => {
     const shouldLockScroll = isPlayerExpanded || isSettingsOpen || (user && !hasCompletedOnboarding) || isCategorizeModalOpen || isCreateCollectionModalOpen;
     document.body.style.overflow = shouldLockScroll ? 'hidden' : '';
@@ -129,6 +138,11 @@ export default function App() {
     };
   }, [isPlayerExpanded, isSettingsOpen, hasCompletedOnboarding, isCategorizeModalOpen, isCreateCollectionModalOpen, user]);
 
+  const currentPodcast = useMemo(() =>
+    podcasts.find(p => p.id === currentPodcastId),
+    [podcasts, currentPodcastId]
+  );
+  
   const handleSetCustomArtwork = (url: string | null) => {
     if (!user) return;
     updateUserData({ customArtwork: url });
@@ -137,7 +151,6 @@ export default function App() {
   const handleSetStreakData = useCallback((newStreakData: StreakData) => {
     updateUserData({ streakData: newStreakData });
   }, [updateUserData]);
-
 
   const updatePodcastInState = (podcastId: string, updates: Partial<Podcast>) => {
     const currentPodcasts = data?.podcasts || [];
@@ -179,7 +192,6 @@ export default function App() {
     }
   }, [podcasts, updatePodcastInState]);
 
-
   const allPodcastsSorted = useMemo(() => {
     return [...podcasts].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   }, [podcasts]);
@@ -192,6 +204,95 @@ export default function App() {
         currentView === 'uncategorized' ? p.collectionId === null : p.collectionId === currentView
     ));
   }, [allPodcastsSorted, useCollectionsView, currentView]);
+
+  const startPlayback = useCallback(async (id: string) => {
+    log(`[App] startPlayback called for id: ${id}`);
+    const audio = audioRef.current;
+    if (!audio) {
+      log('[App Error] Audio ref is null, cannot start playback.');
+      return;
+    }
+
+    setIsPlaybackLoading(true);
+    const podcastToPlay = podcasts.find(p => p.id === id);
+    if (!podcastToPlay) {
+      log(`[App Error] Podcast with id ${id} not found.`);
+      setIsPlaybackLoading(false);
+      return;
+    }
+
+    setCurrentPodcastId(id);
+    setActivePlayerTime(podcastToPlay.progress);
+    if (!isPlayerExpanded) setIsPlayerExpanded(true);
+    
+    if (audioSrcRef.current && audioSrcRef.current.startsWith('blob:')) {
+      log(`[App] Revoking old object URL: ${audioSrcRef.current}`);
+      URL.revokeObjectURL(audioSrcRef.current);
+    }
+
+    let newSrc: string | undefined;
+    if (podcastToPlay.storage === 'indexeddb') {
+      try {
+        log(`[App] Loading audio from IndexedDB for id: ${id}`);
+        const blob = await db.getAudio(id);
+        if (blob) {
+          newSrc = URL.createObjectURL(blob);
+          log(`[App] Created new object URL: ${newSrc}`);
+        } else { 
+          throw new Error('Blob not found in IndexedDB.');
+        }
+      } catch (error) {
+        log(`[App Error] Failed to load from IndexedDB: ${error}`);
+        alert("Could not load audio file. It may have been deleted.");
+        setIsPlaybackLoading(false);
+        return;
+      }
+    } else {
+      newSrc = podcastToPlay.url;
+      log(`[App] Using preloaded URL: ${newSrc}`);
+    }
+    
+    setAudioSrc(newSrc);
+    audio.src = newSrc || '';
+    audio.load();
+    
+    try {
+      log('[App] Calling audio.play()');
+      await audio.play();
+    } catch (error: any) {
+      log(`[App Error] audio.play() was rejected: ${error.name} - ${error.message}`);
+      setIsPlaying(false);
+      setIsPlaybackLoading(false);
+    }
+  }, [podcasts, isPlayerExpanded, log, setIsPlayerExpanded, setIsPlaying]);
+
+  const handleTogglePlayPause = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().catch(e => log(`[Player Error] Playback error: ${e.message}`));
+    } else {
+      audio.pause();
+    }
+  }, [log]);
+
+  const handleSelectPodcast = useCallback((id: string) => {
+    if (id === currentPodcastId) {
+        handleTogglePlayPause();
+    } else {
+        const selectedPodcast = podcasts.find(p => p.id === id);
+        if (!selectedPodcast) return;
+        
+        const previouslyListened = allPodcastsSorted.filter(p => p.isListened && p.id !== id);
+        const lastListened = previouslyListened[previouslyListened.length - 1];
+
+        if (reviewModeEnabled && lastListened) {
+            setReviewPrompt({ show: true, podcastToReview: lastListened, podcastToPlay: selectedPodcast });
+        } else {
+            startPlayback(id);
+        }
+    }
+  }, [currentPodcastId, isPlaying, podcasts, allPodcastsSorted, reviewModeEnabled, handleTogglePlayPause, setReviewPrompt, startPlayback]);
 
   const handlePlaybackEnd = () => {
     if (isPlayerExpanded) {
@@ -219,9 +320,6 @@ export default function App() {
     }
   
     if (currentPodcastId) {
-      // The Player component's onEnded handler calls onProgressSave one last time,
-      // which handles marking the podcast as listened and recording the completion.
-      // Here, we just need to reset the progress to 0 for replayability and reset the player's active time.
       updatePodcastInState(currentPodcastId, { isListened: true, progress: 0 });
       setActivePlayerTime(0);
     } else {
@@ -240,7 +338,6 @@ export default function App() {
     if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
       const nextPodcast = podcastsInCurrentView[currentIndex + 1];
       if (nextPodcast) {
-        // Prepare the next podcast but don't auto-play it
         setCurrentPodcastId(nextPodcast.id);
         setActivePlayerTime(nextPodcast.progress);
         setIsPlaying(false);
@@ -248,20 +345,9 @@ export default function App() {
         setIsPlaying(false);
       }
     } else {
-      // Last podcast in the list finished
       setIsPlaying(false);
     }
   };
-
-  const startPlayback = useCallback((id: string) => {
-    const podcastToPlay = podcasts.find(p => p.id === id);
-    if (podcastToPlay) {
-      setActivePlayerTime(podcastToPlay.progress);
-    }
-    setCurrentPodcastId(id);
-    setIsPlaying(true);
-    if (!isPlayerExpanded) setIsPlayerExpanded(true);
-  }, [isPlayerExpanded, podcasts]);
   
   const handleOnboardingComplete = () => {
     updateUserData({ hasCompletedOnboarding: true });
@@ -275,7 +361,6 @@ export default function App() {
               if (typeof result !== 'string') throw new Error("File read error");
               const importedData = JSON.parse(result);
               
-              // We only import settings, not podcasts/collections as they are now cloud-based
               const { podcasts, collections, ...settings } = importedData;
               
               updateUserData(settings);
@@ -323,7 +408,7 @@ export default function App() {
         newPodcasts.push({
           id,
           name: file.name.replace(/\.[^/.]+$/, ""),
-          url: '', // URL is not stored in Firestore for local files
+          url: '',
           duration,
           progress: 0,
           isListened: false,
@@ -354,6 +439,7 @@ export default function App() {
     if (!user) return;
     
     if (currentPodcastId === id) {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
         setIsPlaying(false);
         setCurrentPodcastId(null);
         setIsPlayerExpanded(false);
@@ -362,7 +448,6 @@ export default function App() {
     const podcastToDelete = podcasts.find(p => p.id === id);
     if (!podcastToDelete) return;
     
-    // Delete from IndexedDB if it's a user upload
     if (podcastToDelete.storage === 'indexeddb') {
         try {
             await db.deleteAudio(id);
@@ -385,6 +470,7 @@ export default function App() {
     const podcastIdsToDelete = new Set(podcastsToDelete.map((p: Podcast) => p.id));
 
     if (currentPodcastId && podcastIdsToDelete.has(currentPodcastId)) {
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
         setIsPlaying(false);
         setCurrentPodcastId(null);
         setIsPlayerExpanded(false);
@@ -420,6 +506,7 @@ export default function App() {
     if (window.confirm("This will delete all your uploaded audio from this device. Are you sure?")) {
         setIsLoading(true);
         if (currentPodcastId && podcasts.find(p => p.id === currentPodcastId)?.storage === 'indexeddb') {
+            if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
             setIsPlaying(false);
             setCurrentPodcastId(null);
             setIsPlayerExpanded(false);
@@ -459,9 +546,9 @@ export default function App() {
             } catch (error) { console.error(`Failed to delete ${podcast.name}:`, error); }
         }
         
-        // This will trigger a full data reset in useUserData
         updateUserData(null); 
 
+        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
         setIsPlaying(false);
         setCurrentPodcastId(null);
         setIsClearDataModalOpen(false);
@@ -508,11 +595,85 @@ export default function App() {
     }
   }, [user, podcasts, collections, updateUserData]);
 
-  const currentPodcast = useMemo(() => 
-    podcasts.find(p => p.id === currentPodcastId),
-    [podcasts, currentPodcastId]
-  );
+    // --- NEW: Audio Control Functions ---
+  const handleSkip = useCallback((seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio || !currentPodcast) return;
+    const newTime = Math.max(0, Math.min(currentPodcast.duration || 0, audio.currentTime + seconds));
+    audio.currentTime = newTime;
+    setActivePlayerTime(newTime);
+    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
+    updatePodcastProgress(currentPodcast.id, newTime);
+  }, [currentPodcast, updatePodcastProgress]);
   
+  const handleSeek = useCallback((newTime: number) => {
+    const audio = audioRef.current;
+    if (!audio || !currentPodcast) return;
+    audio.currentTime = newTime;
+    setActivePlayerTime(newTime);
+    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
+    updatePodcastProgress(currentPodcast.id, newTime);
+  }, [currentPodcast, updatePodcastProgress]);
+
+  // --- NEW: Audio Event Handlers ---
+  const handleAudioPlay = useCallback(() => { log('[Player Event] onPlay'); setIsPlaying(true); }, [log, setIsPlaying]);
+  const handleAudioPause = useCallback(() => { log('[Player Event] onPause'); setIsPlaying(false); }, [log, setIsPlaying]);
+  const handleCanPlay = useCallback(() => { log('[Player Event] onCanPlay.'); setIsPlaybackLoading(false); }, [log]);
+  const handleWaiting = useCallback(() => { log('[Player Event] onWaiting (buffering).'); setIsPlaybackLoading(true); }, [log]);
+  const handlePlaying = useCallback(() => { log('[Player Event] onPlaying.'); setIsPlaybackLoading(false); }, [log]);
+  
+  const handleTimeUpdate = useCallback(() => {
+    if (!audioRef.current || !currentPodcastId) return;
+    const currentTime = audioRef.current.currentTime;
+    setActivePlayerTime(currentTime);
+
+    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
+    progressUpdateDebounceRef.current = window.setTimeout(() => {
+      if(currentPodcastId) {
+        updatePodcastProgress(currentPodcastId, currentTime);
+      }
+    }, 1000);
+  }, [currentPodcastId, updatePodcastProgress, setActivePlayerTime]);
+
+  const handleLoadedMetadata = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentPodcast) return;
+    log(`[Player Event] onLoadedMetadata. Duration: ${audio.duration}`);
+    if (isFinite(currentPodcast.progress) && audio.currentTime !== currentPodcast.progress) {
+        audio.currentTime = currentPodcast.progress;
+        setActivePlayerTime(currentPodcast.progress);
+    }
+    if (!currentPodcast.duration || currentPodcast.duration === 0) {
+        updatePodcastDuration(currentPodcast.id, audio.duration);
+    }
+  }, [currentPodcast, log, updatePodcastDuration, setActivePlayerTime]);
+
+  const handleAudioEnded = useCallback(() => {
+    log(`[Player Event] onEnded for "${currentPodcast?.name}"`);
+    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
+    if (currentPodcast && currentPodcast.duration > 0) {
+        updatePodcastProgress(currentPodcast.id, currentPodcast.duration);
+    }
+    handlePlaybackEnd();
+  }, [currentPodcast, updatePodcastProgress, handlePlaybackEnd, log]);
+  
+  const handleAudioError = useCallback((e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
+    const audio = e.currentTarget;
+    const error = audio.error;
+    if (error) {
+        log(`[Player Error] Code: ${error.code}, Message: ${error.message}`);
+        alert(`Error playing audio: ${error.message} (Code: ${error.code})`);
+    }
+    setIsPlaybackLoading(false);
+    setIsPlaying(false);
+  }, [log, setIsPlaying]);
+
+  useEffect(() => {
+    if(audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
+
   if (!isAppReady || !isMinLoadTimeMet) {
     return <LoadingSpinner />;
   }
@@ -527,33 +688,12 @@ export default function App() {
     );
   }
 
-  // User Status Check
   if (status && user.email !== 'maxence.poskin@gmail.com') {
     if (status === 'pending') {
-      return (
-        <LanguageProvider language={language || 'en'}>
-          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
-            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
-              <h1 className="text-2xl font-bold mb-4">Approval Pending</h1>
-              <p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p>
-              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
-            </div>
-          </div>
-        </LanguageProvider>
-      );
+      return ( <LanguageProvider language={language || 'en'}><div className="text-brand-text min-h-screen flex items-center justify-center p-4"><div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md"><h1 className="text-2xl font-bold mb-4">Approval Pending</h1><p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p><button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button></div></div></LanguageProvider> );
     }
     if (status === 'denied') {
-      return (
-        <LanguageProvider language={language || 'en'}>
-          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
-            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
-              <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-              <p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p>
-              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
-            </div>
-          </div>
-        </LanguageProvider>
-      );
+      return ( <LanguageProvider language={language || 'en'}><div className="text-brand-text min-h-screen flex items-center justify-center p-4"><div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md"><h1 className="text-2xl font-bold mb-4">Access Denied</h1><p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p><button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button></div></div></LanguageProvider> );
     }
   }
   
@@ -561,11 +701,7 @@ export default function App() {
     return (
       <LanguageProvider language={language || 'en'}>
         <div className="text-brand-text min-h-screen animate-fade-in">
-          <OnboardingModal
-            isOpen={true}
-            onComplete={handleOnboardingComplete}
-            onImportData={(file) => handleImportData(file, handleOnboardingComplete)}
-          />
+          <OnboardingModal isOpen={true} onComplete={handleOnboardingComplete} onImportData={(file) => handleImportData(file, handleOnboardingComplete)} />
         </div>
       </LanguageProvider>
     );
@@ -576,6 +712,19 @@ export default function App() {
         <div className="text-brand-text min-h-screen animate-fade-in">
         {isDebugMode && <DebugOverlay />}
         <audio ref={soundAudioRef} preload="auto" />
+        <audio
+          ref={audioRef}
+          onPlay={handleAudioPlay}
+          onPause={handleAudioPause}
+          onTimeUpdate={handleTimeUpdate}
+          onEnded={handleAudioEnded}
+          onLoadedMetadata={handleLoadedMetadata}
+          onCanPlay={handleCanPlay}
+          onWaiting={handleWaiting}
+          onPlaying={handlePlaying}
+          onError={handleAudioError}
+          preload="auto"
+        />
         {showConfetti && <Confetti count={50} theme={theme} />}
 
         <AppUI
@@ -589,17 +738,14 @@ export default function App() {
             streakData={streakData}
             isTodayComplete={isTodayComplete}
             currentPodcastId={currentPodcastId}
+            currentPodcast={currentPodcast}
             isPlaying={isPlaying}
             isPlayerExpanded={isPlayerExpanded}
-            setIsPlaying={setIsPlaying}
             setIsPlayerExpanded={setIsPlayerExpanded}
-            updatePodcastProgress={updatePodcastProgress}
-            handlePlaybackEnd={handlePlaybackEnd}
             customArtwork={customArtwork}
             playbackRate={playbackRate}
             setPlaybackRate={setPlaybackRate}
             activePlayerTime={activePlayerTime}
-            setActivePlayerTime={setActivePlayerTime}
             isSettingsOpen={isSettingsOpen}
             setIsSettingsOpen={setIsSettingsOpen}
             hideCompleted={hideCompleted}
@@ -631,7 +777,6 @@ export default function App() {
             reviewPrompt={reviewPrompt}
             setReviewPrompt={setReviewPrompt}
             setNextPodcastOnEnd={setNextPodcastOnEnd}
-            startPlayback={startPlayback}
             isCategorizeModalOpen={isCategorizeModalOpen}
             setIsCategorizeModalOpen={setIsCategorizeModalOpen}
             podcastsToCategorize={podcastsToCategorize}
@@ -642,8 +787,8 @@ export default function App() {
             setCurrentView={setCurrentView}
             isClearDataModalOpen={isClearDataModalOpen}
             setIsClearDataModalOpen={setIsClearDataModalOpen}
-            // Fix: Pass missing props to the AppUI component to satisfy the AppUIProps interface.
             isLoading={isLoading}
+            isPlaybackLoading={isPlaybackLoading}
             onFileUpload={handleFileUpload}
             onDeletePodcast={handleDeletePodcast}
             onDeleteCollection={handleDeleteCollection}
@@ -651,36 +796,16 @@ export default function App() {
             onClearLocalFiles={handleClearLocalFiles}
             onResetPreloaded={handleResetPreloaded}
             onClearAll={handleClearAll}
+            // Fix: Corrected prop value to pass the handler function.
             onUpdatePreloadedData={handleUpdatePreloadedData}
             totalStorageUsed={totalStorageUsed}
+            onSelectPodcast={handleSelectPodcast}
+            onTogglePlayPause={handleTogglePlayPause}
+            onSkip={handleSkip}
+            onSeek={handleSeek}
+            showPlaybackSpeedControl={showPlaybackSpeedControl}
+            setShowPlaybackSpeedControl={(value: boolean) => updateUserData({showPlaybackSpeedControl: value})}
         />
-        
-        {currentPodcast && (
-            <Player
-                podcast={currentPodcast}
-                isPlaying={isPlaying}
-                setIsPlaying={setIsPlaying}
-                onProgressSave={updatePodcastProgress}
-                onEnded={handlePlaybackEnd}
-                isPlayerExpanded={isPlayerExpanded}
-                setIsPlayerExpanded={setIsPlayerExpanded}
-                artworkUrl={
-                  (useCollectionsView &&
-                    collections.find(c => c.id === currentPodcast.collectionId)?.artworkUrl
-                  ) || customArtwork
-                }
-                playbackRate={playbackRate}
-                onPlaybackRateChange={setPlaybackRate}
-                currentTime={activePlayerTime}
-                onCurrentTimeUpdate={setActivePlayerTime}
-                userId={user.uid}
-                onDurationFetch={updatePodcastDuration}
-                layoutMode={playerLayout}
-                setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-                showPlaybackSpeedControl={showPlaybackSpeedControl}
-                setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
-            />
-        )}
       </div>
     </LanguageProvider>
   );
