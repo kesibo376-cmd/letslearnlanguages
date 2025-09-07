@@ -16,7 +16,8 @@ import ClearDataModal from './ClearDataModal';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlayCircleIcon from './icons/PlayCircleIcon';
 import PlusIcon from './icons/PlusIcon';
-import ChevronDownIcon from './icons/ChevronDownIcon';
+import GridIcon from './icons/GridIcon';
+import ListIcon from './icons/ListIcon';
 
 // Define the props for AppUI
 interface AppUIProps {
@@ -400,29 +401,39 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                   </>
                 ) : (
                   <div>
-                    {playerLayout === 'pimsleur' ? (
-                        <div className="flex justify-between items-center mb-4">
-                            <button onClick={() => setCurrentView(null)} className="text-3xl font-bold text-brand-text flex items-center gap-2 group">
-                                <span className="truncate group-hover:underline">{currentCollectionName || t('main.allAudio')}</span>
-                                <ChevronDownIcon size={24} className="text-brand-text-secondary flex-shrink-0"/>
-                            </button>
-                            <div className="text-lg font-semibold text-brand-text-secondary flex-shrink-0">
-                                {listenedCount}/{totalCount}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex justify-between items-center mb-2">
-                            <div className="flex-1 text-left">
-                                {currentView && (
-                                    <button onClick={() => setCurrentView(null)} className="flex items-center gap-1 text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
-                                        <ChevronLeftIcon size={20} /> {t('main.backToCollections')}
+                      <div className="flex justify-between items-center mb-4 gap-4">
+                          <div className="flex-1">
+                              {currentView && (
+                                  <button onClick={() => setCurrentView(null)} className="flex items-center gap-1 text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
+                                      <ChevronLeftIcon size={20} />
+                                      <span className="hidden sm:inline">{t('main.backToCollections')}</span>
+                                  </button>
+                              )}
+                          </div>
+                          <h2 className="flex-shrink text-xl font-bold text-brand-text text-center truncate">{currentCollectionName || t('main.allAudio')}</h2>
+                          <div className="flex-1 flex justify-end">
+                            {useCollectionsView && currentView && (
+                                <div className="flex items-center bg-brand-surface-light rounded-md p-1 b-border">
+                                    <button
+                                        onClick={() => setPlayerLayout('pimsleur')}
+                                        className={`p-1.5 sm:p-2 rounded transition-colors ${playerLayout === 'pimsleur' ? 'active bg-brand-surface' : 'hover:bg-brand-surface'}`}
+                                        aria-label="Grid View"
+                                        title="Grid View"
+                                    >
+                                        <GridIcon size={20} className="text-brand-text" />
                                     </button>
-                                )}
-                            </div>
-                            <h2 className="flex-1 text-xl font-bold text-brand-text text-center truncate">{currentCollectionName || t('main.allAudio')}</h2>
-                            <div className="flex-1" />
-                        </div>
-                    )}
+                                    <button
+                                        onClick={() => setPlayerLayout('default')}
+                                        className={`p-1.5 sm:p-2 rounded transition-colors ${playerLayout === 'default' ? 'active bg-brand-surface' : 'hover:bg-brand-surface'}`}
+                                        aria-label="List View"
+                                        title="List View"
+                                    >
+                                        <ListIcon size={20} className="text-brand-text" />
+                                    </button>
+                                </div>
+                            )}
+                          </div>
+                      </div>
 
                     {firstUnplayedInView && (
                       <div className="my-4">
