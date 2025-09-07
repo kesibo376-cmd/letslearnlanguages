@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Podcast, LayoutMode } from '../types';
 import { formatTime } from '../lib/utils';
@@ -55,7 +54,6 @@ const Player: React.FC<PlayerProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
-  const [dragState, setDragState] = useState({ isDragging: false, startY: 0, deltaY: 0 });
   const [audioSrc, setAudioSrc] = useState<string | undefined>(undefined);
   const [isLoadingSrc, setIsLoadingSrc] = useState(true);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
@@ -233,41 +231,13 @@ const Player: React.FC<PlayerProps> = ({
     onEnded();
   }, [podcast.id, podcast.duration, onProgressSave, onEnded]);
 
-  // --- Drag-to-close logic (unchanged) ---
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isPlayerExpanded) return;
-    const target = e.target as HTMLElement;
-    // If the touch starts on an element (or its child) that should not trigger a drag, abort.
-    if (target.closest('[data-no-drag="true"]')) {
-      return;
-    }
-    setDragState({ isDragging: true, startY: e.touches[0].clientY, deltaY: 0 });
-  };
-
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isPlayerExpanded) return;
-
-    // Prevent default scroll/refresh behavior for any touch movement inside the expanded player.
-    // This creates the "no scroll zone" and makes button taps more reliable on mobile.
+    // When the player is expanded, prevent default touch actions like scrolling
+    // to make it a "no scroll zone".
     e.preventDefault();
-
-    if (!dragState.isDragging) return; // Only update drag state if a drag was initiated.
-
-    const currentY = e.touches[0].clientY;
-    const delta = Math.max(0, currentY - dragState.startY);
-    setDragState(prev => ({ ...prev, deltaY: delta }));
-  };
-
-  const handleTouchEnd = () => {
-    if (!dragState.isDragging || !isPlayerExpanded) return;
-    if (dragState.deltaY > window.innerHeight / 4) {
-      setIsPlayerExpanded(false);
-    }
-    setDragState({ isDragging: false, startY: 0, deltaY: 0 });
   };
 
   const progressPercent = podcast?.duration && podcast.duration > 0 ? (currentTime / podcast.duration) * 100 : 0;
-  const expandedPlayerStyle: React.CSSProperties = dragState.isDragging ? { transition: 'none', transform: `translateY(${dragState.deltaY}px)` } : {};
   const animatedBackgroundStyle: React.CSSProperties = { background: `linear-gradient(${progressPercent * 3.6}deg, var(--brand-gradient-start), var(--brand-gradient-end))`, transition: 'background 1s linear' };
 
   // --- Sub-components for different layouts ---
@@ -348,7 +318,7 @@ const Player: React.FC<PlayerProps> = ({
       <audio ref={audioRef} src={audioSrc} onTimeUpdate={handleTimeUpdate} onEnded={handleAudioEnded} onLoadedMetadata={handleLoadedMetadata} preload="metadata" />
       <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
         {/* Expanded Player */}
-        <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} style={expandedPlayerStyle} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchEnd}>
+        <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} onTouchMove={handleTouchMove}>
           <div className="absolute inset-0 -z-10 animated-player-bg" style={animatedBackgroundStyle} />
           {layoutMode === 'pimsleur' && artworkUrl && <img src={artworkUrl} alt="" className="absolute inset-0 w-full h-full object-cover -z-20 opacity-20" />}
           
@@ -417,4 +387,3 @@ const Player: React.FC<PlayerProps> = ({
 };
 
 export default Player;
-//hey hey hey the player

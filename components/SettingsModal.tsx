@@ -52,8 +52,8 @@ const THEMES: { id: Theme; name: string }[] = [
   { id: 'charcoal', name: 'Charcoal' },
   { id: 'minecraft', name: 'Minecraft' },
   { id: 'minimal', name: 'Minimal' },
-  { id: 'hand-drawn', name: 'Hand-drawn' },
   { id: 'brutalist', name: 'Brutalist' },
+  { id: 'cyber-brutalist', name: 'Cyber Brutalist' },
   { id: 'retro-web', name: 'Retro Web' },
 ];
 
@@ -244,7 +244,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
       </div>
       <div>
         <label className="block text-sm font-medium text-brand-text-secondary mb-2">{t('settings.appearance.theme')}</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {THEMES.map(theme => (
             <button key={theme.id} onClick={() => onSetTheme(theme.id)} className={`w-full text-center p-2 text-sm rounded-md transition-colors duration-200 b-border ${currentTheme === theme.id ? 'active' : 'bg-brand-surface-light hover:bg-opacity-75'}`}>
               {theme.name}

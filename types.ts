@@ -16,7 +16,7 @@ export interface Collection {
   artworkUrl?: string;
 }
 
-export type Theme = 'charcoal' | 'minecraft' | 'brutalist' | 'retro-web' | 'minimal' | 'hand-drawn';
+export type Theme = 'charcoal' | 'minecraft' | 'brutalist' | 'retro-web' | 'minimal' | 'cyber-brutalist';
 
 export type StreakDifficulty = 'easy' | 'normal' | 'hard' | 'extreme';
 

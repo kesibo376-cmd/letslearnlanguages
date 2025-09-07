@@ -27,10 +27,10 @@ const THEME_CONFIG: Record<Theme, { colors: string[]; shapes: ('rect' | 'pixel')
     colors: ['#007aff', '#6e6e73', '#f2f2f7'],
     shapes: ['rect'],
   },
-  'hand-drawn': {
-    colors: ['#0057b8', '#3a3a3a', '#707070'],
-    shapes: ['rect'],
-  }
+  'cyber-brutalist': {
+    colors: ['#00FF00', '#009900', '#0a0a0a'],
+    shapes: ['pixel', 'rect'],
+  },
 };
 
 const Confetti: React.FC<ConfettiProps> = ({ count, theme }) => {
