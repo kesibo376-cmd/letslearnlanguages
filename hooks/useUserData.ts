@@ -76,7 +76,6 @@ export function useUserData(userId?: string) {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [data, setData] = useState<any | null>(null);
 
-    // Fix: Define `updateUserData` to handle updating user data in Firestore.
     const updateUserData = useCallback((updates: Partial<any> | null) => {
         if (!userId) {
             console.warn("updateUserData called without a userId.");
@@ -118,37 +117,67 @@ export function useUserData(userId?: string) {
 
         const unsubscribe = docRef.onSnapshot((docSnap) => {
             if (docSnap.exists) {
-                const userData = docSnap.data();
+                const userData = docSnap.data() as any;
                 const defaultData = getDefaultData();
 
-                const userPodcastIds = new Set((userData.podcasts || []).map(p => p.id));
-                const missingPodcasts = defaultData.podcasts.filter(p => !userPodcastIds.has(p.id));
+                // --- Robust Data Sync Logic ---
+                const userPodcasts: Podcast[] = userData.podcasts || [];
+                const userCollections: Collection[] = userData.collections || [];
 
-                const userCollectionsIds = new Set((userData.collections || []).map(c => c.id));
-                const missingCollections = defaultData.collections.filter(c => !userCollectionsIds.has(c.id));
+                // 1. Isolate user-uploaded files, which should always be preserved.
+                const userUploadedPodcasts = userPodcasts.filter(p => p.storage === 'indexeddb');
+
+                // 2. Create a map of the user's progress for existing preloaded files, keyed by URL.
+                const userProgressMap = new Map<string, { progress: number; isListened: boolean }>();
+                userPodcasts
+                    .filter(p => p.storage === 'preloaded' && p.url)
+                    .forEach(p => {
+                        userProgressMap.set(p.url, { progress: p.progress, isListened: p.isListened });
+                    });
+
+                // 3. Rebuild the preloaded podcast list from the app's default data (the source of truth).
+                const syncedPreloadedPodcasts = defaultData.podcasts.map((defaultPodcast) => {
+                    const savedProgress = userProgressMap.get(defaultPodcast.url);
+                    // If progress exists for this URL, apply it to the fresh default podcast object.
+                    return savedProgress ? { ...defaultPodcast, ...savedProgress } : defaultPodcast;
+                });
+
+                // 4. Combine the pristine user-uploaded list with the newly synced preloaded list.
+                const finalPodcasts = [...userUploadedPodcasts, ...syncedPreloadedPodcasts];
+
+                // 5. Sync collections: Preserve user-created collections and merge user customizations (like artwork) into default collections.
+                const defaultCollectionIds = new Set(defaultData.collections.map(c => c.id));
+                const userCreatedCollections = userCollections.filter(c => !defaultCollectionIds.has(c.id));
+                const syncedDefaultCollections = defaultData.collections.map(defaultCollection => {
+                    const userCollectionVersion = userCollections.find(uc => uc.id === defaultCollection.id);
+                    return userCollectionVersion ? { ...defaultCollection, ...userCollectionVersion } : defaultCollection;
+                });
+                const finalCollections = [...syncedDefaultCollections, ...userCreatedCollections];
                 
+                // 6. Check if an update to Firestore is necessary to avoid unnecessary writes.
+                const sortById = (a: {id: string}, b: {id: string}) => a.id.localeCompare(b.id);
+                const hasPodcastChanges = JSON.stringify(finalPodcasts.slice().sort(sortById)) !== JSON.stringify((userData.podcasts || []).slice().sort(sortById));
+                const hasCollectionChanges = JSON.stringify(finalCollections.slice().sort(sortById)) !== JSON.stringify((userData.collections || []).slice().sort(sortById));
+
                 const dataWithDefaults = { ...defaultData, ...userData };
-                
-                if (missingPodcasts.length > 0 || missingCollections.length > 0) {
-                    const finalPodcasts = [...(dataWithDefaults.podcasts || []), ...missingPodcasts];
-                    const finalCollections = [...(dataWithDefaults.collections || []), ...missingCollections];
-                    
-                    // Optimistically update local state for immediate UI response
-                    setData({
+
+                if (hasPodcastChanges || hasCollectionChanges) {
+                     // Optimistically update local state for a snappy UI response.
+                     setData({
                         ...dataWithDefaults,
                         podcasts: finalPodcasts,
                         collections: finalCollections,
-                    });
-
-                    // Persist the changes back to Firestore
-                    docRef.update({
+                     });
+                     // Persist the synced data back to Firestore.
+                     docRef.update({
                         podcasts: finalPodcasts,
                         collections: finalCollections
-                    }).catch(err => console.error("Failed to persist merged preloaded data:", err));
+                     }).catch(err => console.error("Failed to sync preloaded data:", err));
                 } else {
-                    // No new content, just set the data from firestore merged with defaults
-                    setData(dataWithDefaults);
+                     // No changes needed, just load the data as is (with defaults filled in).
+                     setData(dataWithDefaults);
                 }
+
             } else {
                 console.log("No user data found for UID:", userId);
                 setData(null);
