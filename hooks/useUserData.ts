@@ -127,19 +127,24 @@ export function useUserData(userId?: string) {
                 // 1. Isolate user-uploaded files, which should always be preserved.
                 const userUploadedPodcasts = userPodcasts.filter(p => p.storage === 'indexeddb');
 
-                // 2. Create a map of the user's progress for existing preloaded files, keyed by URL.
-                const userProgressMap = new Map<string, { progress: number; isListened: boolean }>();
+                // 2. Create a map of the user's state for existing preloaded files, keyed by URL.
+                const userStateMap = new Map<string, { progress: number; isListened: boolean; duration: number }>();
                 userPodcasts
                     .filter(p => p.storage === 'preloaded' && p.url)
                     .forEach(p => {
-                        userProgressMap.set(p.url, { progress: p.progress, isListened: p.isListened });
+                        userStateMap.set(p.url, { progress: p.progress, isListened: p.isListened, duration: p.duration });
                     });
 
                 // 3. Rebuild the preloaded podcast list from the app's default data (the source of truth).
                 const syncedPreloadedPodcasts = defaultData.podcasts.map((defaultPodcast) => {
-                    const savedProgress = userProgressMap.get(defaultPodcast.url);
-                    // If progress exists for this URL, apply it to the fresh default podcast object.
-                    return savedProgress ? { ...defaultPodcast, ...savedProgress } : defaultPodcast;
+                    const userState = userStateMap.get(defaultPodcast.url);
+                    // If state exists for this URL, merge it with the fresh default podcast object.
+                    if (userState) {
+                        // Preserve the fetched duration if it exists, otherwise use the default.
+                        const duration = (userState.duration && userState.duration > 0) ? userState.duration : defaultPodcast.duration;
+                        return { ...defaultPodcast, progress: userState.progress, isListened: userState.isListened, duration };
+                    }
+                    return defaultPodcast;
                 });
 
                 // 4. Combine the pristine user-uploaded list with the newly synced preloaded list.

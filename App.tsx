@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -140,20 +136,28 @@ export default function App() {
     };
 
     const fetchAllDurations = async () => {
-      const promises = podcastsToUpdate.map(fetchDurationForPodcast);
-      const results = await Promise.allSettled(promises);
+      const CONCURRENCY_LIMIT = 6;
+      const queue = [...podcastsToUpdate];
+      const validResults: { id: string; duration: number }[] = [];
+
+      const worker = async () => {
+        while (true) {
+          const podcast = queue.shift();
+          if (!podcast) {
+            break; // No more items in queue
+          }
+          const result = await fetchDurationForPodcast(podcast);
+          if (result && !isNaN(result.duration) && result.duration > 0) {
+            validResults.push(result);
+          }
+        }
+      };
+
+      const workers = Array(CONCURRENCY_LIMIT).fill(null).map(worker);
+      await Promise.all(workers);
 
       // Unmark from fetching so they can be retried if they failed
       podcastsToUpdate.forEach(p => fetchingDurationsRef.current.delete(p.id));
-
-      const validResults: { id: string, duration: number }[] = [];
-      results.forEach(result => {
-        if (result.status === 'fulfilled' && result.value) {
-          if (!isNaN(result.value.duration) && result.value.duration > 0) {
-            validResults.push(result.value);
-          }
-        }
-      });
 
       if (validResults.length > 0) {
         console.log(`[Duration Fetch] Successfully fetched ${validResults.length} durations.`);
@@ -163,10 +167,10 @@ export default function App() {
           if (docSnap.exists) {
             const latestData = docSnap.data();
             const latestPodcasts = latestData.podcasts || [];
+            const durationMap = new Map(validResults.map(item => [item.id, item.duration]));
             const updatedPodcasts = latestPodcasts.map((p: Podcast) => {
-              const found = validResults.find(r => r.id === p.id);
-              if (found) {
-                return { ...p, duration: found.duration };
+              if (durationMap.has(p.id)) {
+                return { ...p, duration: durationMap.get(p.id)! };
               }
               return p;
             });
