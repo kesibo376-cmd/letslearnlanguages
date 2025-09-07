@@ -471,6 +471,37 @@ export default function App() {
     updateUserData({ podcasts: updatedPodcasts });
 
   }, [user, currentPodcastId, podcasts, updateUserData]);
+
+  const handleDeleteCollection = useCallback(async (id: string) => {
+    if (!user) return;
+
+    const podcastsToDelete = podcasts.filter((p: Podcast) => p.collectionId === id);
+    const podcastIdsToDelete = new Set(podcastsToDelete.map((p: Podcast) => p.id));
+
+    if (currentPodcastId && podcastIdsToDelete.has(currentPodcastId)) {
+        setIsPlaying(false);
+        setCurrentPodcastId(null);
+        setIsPlayerExpanded(false);
+    }
+
+    for (const podcast of podcastsToDelete) {
+        if (podcast.storage === 'indexeddb') {
+            try {
+                await db.deleteAudio(podcast.id);
+            } catch (error) {
+                console.error(`Failed to delete local audio ${podcast.name}:`, error);
+            }
+        }
+    }
+
+    const updatedPodcasts = podcasts.filter((p: Podcast) => p.collectionId !== id);
+    const updatedCollections = collections.filter((c: Collection) => c.id !== id);
+
+    updateUserData({
+        podcasts: updatedPodcasts,
+        collections: updatedCollections,
+    });
+  }, [user, podcasts, collections, currentPodcastId, updateUserData, setIsPlaying, setIsPlayerExpanded]);
   
   const handleResetProgress = () => {
     const resetPodcasts = podcasts.map(p => ({...p, progress: 0, isListened: false}));
@@ -706,6 +737,7 @@ export default function App() {
             isLoading={isLoading}
             onFileUpload={handleFileUpload}
             onDeletePodcast={handleDeletePodcast}
+            onDeleteCollection={handleDeleteCollection}
             onResetProgress={handleResetProgress}
             onClearLocalFiles={handleClearLocalFiles}
             onResetPreloaded={handleResetPreloaded}

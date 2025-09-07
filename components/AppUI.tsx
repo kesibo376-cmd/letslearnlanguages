@@ -85,6 +85,7 @@ interface AppUIProps {
     isLoading: boolean;
     onFileUpload: (files: FileList) => void;
     onDeletePodcast: (id: string) => void;
+    onDeleteCollection: (id: string) => void;
     onResetProgress: () => void;
     onClearLocalFiles: () => void;
     onResetPreloaded: () => void;
@@ -105,7 +106,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     allPodcastsSorted, podcastsInCurrentView, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
     setIsCreateCollectionModalOpen, currentView, setCurrentView, isClearDataModalOpen,
-    setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, onUpdatePreloadedData, totalStorageUsed
+    setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onDeleteCollection, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, onUpdatePreloadedData, totalStorageUsed
   } = props;
 
   const { t } = useTranslation();
@@ -215,12 +216,6 @@ const AppUI: React.FC<AppUIProps> = (props) => {
   
   const handleRenameCollection = (id: string, newName: string) => {
     setCollections(collections.map(c => c.id === id ? { ...c, name: newName } : c));
-  };
-  
-  const handleDeleteCollection = (id: string) => {
-    setCollections(collections.filter(c => c.id !== id));
-    // Move podcasts from deleted collection to uncategorized
-    setPodcasts(podcasts.map(p => p.collectionId === id ? { ...p, collectionId: null } : p));
   };
   
   const handlePlayCollection = (collectionId: string | null) => {
@@ -392,7 +387,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                           }}
                           onPlayCollection={handlePlayCollection}
                           onRenameCollection={handleRenameCollection}
-                          onDeleteCollection={handleDeleteCollection}
+                          onDeleteCollection={onDeleteCollection}
                           onResetCollectionProgress={handleResetCollectionProgress}
                           onSetCollectionArtwork={handleSetCollectionArtwork}
                           lastPlayedCollectionId={lastPlayedCollectionId}
