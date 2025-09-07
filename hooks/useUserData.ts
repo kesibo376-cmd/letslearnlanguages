@@ -84,6 +84,12 @@ const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] = [
     url: `https://cheery-mooncake-49edfd.netlify.app/zh-v/mandarin%20chinese%20v%20-%20unit%20${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'Chinese V',
   })),
+
+  // Japanese I (30 files) 
+  ...Array.from({ length: 30 }, (_, i) => ({
+    url: `https://68bdba59c8221d49b9f1def4--cheery-mooncake-49edfd.netlify.app/japanese%20i/japanese%20i%20[3rd%20ed]%20-%20lesson%20${String(i + 1).padStart(2, '0')}.mp3`,
+    collectionName: 'Japanese I',
+  })),
 ];
 
 const DEFAULT_STREAK_DATA: StreakData = {
