@@ -619,16 +619,24 @@ export default function App() {
   );
   
   if (!isAppReady || !isMinLoadTimeMet) {
-    return <LoadingSpinner />;
+    return (
+      <>
+        {isDebugMode && <DebugOverlay />}
+        <LoadingSpinner />
+      </>
+    );
   }
   
   if (!user) {
     return (
-      <LanguageProvider language={'en'}>
-        <div className="text-brand-text min-h-screen">
-            <AuthForm />
-        </div>
-      </LanguageProvider>
+      <>
+        {isDebugMode && <DebugOverlay />}
+        <LanguageProvider language={'en'}>
+          <div className="text-brand-text min-h-screen">
+              <AuthForm />
+          </div>
+        </LanguageProvider>
+      </>
     );
   }
 
@@ -636,155 +644,166 @@ export default function App() {
   if (status && user.email !== 'maxence.poskin@gmail.com') {
     if (status === 'pending') {
       return (
-        <LanguageProvider language={language || 'en'}>
-          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
-            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
-              <h1 className="text-2xl font-bold mb-4">Approval Pending</h1>
-              <p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p>
-              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
+        <>
+          {isDebugMode && <DebugOverlay />}
+          <LanguageProvider language={language || 'en'}>
+            <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
+              <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
+                <h1 className="text-2xl font-bold mb-4">Approval Pending</h1>
+                <p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p>
+                <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
+              </div>
             </div>
-          </div>
-        </LanguageProvider>
+          </LanguageProvider>
+        </>
       );
     }
     if (status === 'denied') {
       return (
-        <LanguageProvider language={language || 'en'}>
-          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
-            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
-              <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-              <p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p>
-              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
+        <>
+          {isDebugMode && <DebugOverlay />}
+          <LanguageProvider language={language || 'en'}>
+            <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
+              <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
+                <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+                <p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p>
+                <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
+              </div>
             </div>
-          </div>
-        </LanguageProvider>
+          </LanguageProvider>
+        </>
       );
     }
   }
   
   if (!hasCompletedOnboarding) {
     return (
-      <LanguageProvider language={language || 'en'}>
-        <div className="text-brand-text min-h-screen animate-fade-in">
-          <OnboardingModal
-            isOpen={true}
-            onComplete={handleOnboardingComplete}
-            onImportData={(file) => handleImportData(file, handleOnboardingComplete)}
-          />
-        </div>
-      </LanguageProvider>
+      <>
+        {isDebugMode && <DebugOverlay />}
+        <LanguageProvider language={language || 'en'}>
+          <div className="text-brand-text min-h-screen animate-fade-in">
+            <OnboardingModal
+              isOpen={true}
+              onComplete={handleOnboardingComplete}
+              onImportData={(file) => handleImportData(file, handleOnboardingComplete)}
+            />
+          </div>
+        </LanguageProvider>
+      </>
     );
   }
 
   return (
-    <LanguageProvider language={language || 'en'}>
-        <div className="text-brand-text min-h-screen animate-fade-in">
-        {isDebugMode && <DebugOverlay />}
-        <audio ref={soundAudioRef} preload="auto" />
-        {showConfetti && <Confetti count={50} theme={theme} />}
+    <>
+      {isDebugMode && <DebugOverlay />}
+      <LanguageProvider language={language || 'en'}>
+          <div className="text-brand-text min-h-screen animate-fade-in">
+          <audio ref={soundAudioRef} preload="auto" />
+          {showConfetti && <Confetti count={50} theme={theme} />}
 
-        <AppUI
-            user={user}
-            onLogout={logout}
-            onImportData={handleImportData}
-            podcasts={podcasts}
-            collections={collections}
-            title={title}
-            setTitle={(newTitle: string) => updateUserData({ title: newTitle })}
-            streakData={streakData}
-            isTodayComplete={isTodayComplete}
-            currentPodcastId={currentPodcastId}
-            isPlaying={isPlaying}
-            isPlayerExpanded={isPlayerExpanded}
-            setIsPlaying={setIsPlaying}
-            setIsPlayerExpanded={setIsPlayerExpanded}
-            updatePodcastProgress={updatePodcastProgress}
-            handlePlaybackEnd={handlePlaybackEnd}
-            customArtwork={customArtwork}
-            playbackRate={playbackRate}
-            setPlaybackRate={setPlaybackRate}
-            activePlayerTime={activePlayerTime}
-            setActivePlayerTime={setActivePlayerTime}
-            isSettingsOpen={isSettingsOpen}
-            setIsSettingsOpen={setIsSettingsOpen}
-            hideCompleted={hideCompleted}
-            setHideCompleted={(value: boolean) => updateUserData({ hideCompleted: value })}
-            reviewModeEnabled={reviewModeEnabled}
-            setReviewModeEnabled={(value: boolean) => updateUserData({ reviewModeEnabled: value })}
-            completionSound={completionSound}
-            setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
-            useCollectionsView={useCollectionsView}
-            setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
-            playOnNavigate={playOnNavigate}
-            setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
-            playerLayout={playerLayout}
-            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-            lastPlayedCollectionId={lastPlayedCollectionId}
-            setLastPlayedCollectionId={(id: string | null) => updateUserData({ lastPlayedCollectionId: id })}
-            handleSetCustomArtwork={handleSetCustomArtwork}
-            dataToExport={data}
-            theme={theme}
-            setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
-            setLanguage={(lang: Language) => updateUserData({ language: lang })}
-            setStreakData={handleSetStreakData}
-            setPodcasts={(newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts })}
-            setCollections={(newCollections: Collection[]) => updateUserData({ collections: newCollections })}
-            unrecordCompletion={unrecordCompletion}
-            recordCompletion={recordCompletion}
-            allPodcastsSorted={allPodcastsSorted}
-            podcastsInCurrentView={podcastsInCurrentView}
-            reviewPrompt={reviewPrompt}
-            setReviewPrompt={setReviewPrompt}
-            setNextPodcastOnEnd={setNextPodcastOnEnd}
-            startPlayback={startPlayback}
-            isCategorizeModalOpen={isCategorizeModalOpen}
-            setIsCategorizeModalOpen={setIsCategorizeModalOpen}
-            podcastsToCategorize={podcastsToCategorize}
-            setPodcastsToCategorize={setPodcastsToCategorize}
-            isCreateCollectionModalOpen={isCreateCollectionModalOpen}
-            setIsCreateCollectionModalOpen={setIsCreateCollectionModalOpen}
-            currentView={currentView}
-            setCurrentView={setCurrentView}
-            isClearDataModalOpen={isClearDataModalOpen}
-            setIsClearDataModalOpen={setIsClearDataModalOpen}
-            isLoading={isLoading}
-            onFileUpload={handleFileUpload}
-            // Fix: Corrected prop names to pass the correct handler functions to the AppUI component.
-            onDeletePodcast={handleDeletePodcast}
-            onDeleteCollection={handleDeleteCollection}
-            onResetProgress={handleResetProgress}
-            onClearLocalFiles={handleClearLocalFiles}
-            onResetPreloaded={handleResetPreloaded}
-            onClearAll={handleClearAll}
-            onUpdatePreloadedData={handleUpdatePreloadedData}
-            totalStorageUsed={totalStorageUsed}
-        />
-        
-        {currentPodcast && (
-            <Player
-            key={currentPodcast.id}
-            podcast={currentPodcast}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            onProgressSave={updatePodcastProgress}
-            onEnded={handlePlaybackEnd}
-            isPlayerExpanded={isPlayerExpanded}
-            setIsPlayerExpanded={setIsPlayerExpanded}
-            artworkUrl={customArtwork}
-            playbackRate={playbackRate}
-            onPlaybackRateChange={setPlaybackRate}
-            currentTime={activePlayerTime}
-            onCurrentTimeUpdate={setActivePlayerTime}
-            onDurationFetch={updatePodcastDuration}
-            userId={user.uid}
-            layoutMode={playerLayout}
-            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-            showPlaybackSpeedControl={showPlaybackSpeedControl}
-            setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
-            />
-        )}
-        </div>
-    </LanguageProvider>
+          <AppUI
+              user={user}
+              onLogout={logout}
+              onImportData={handleImportData}
+              podcasts={podcasts}
+              collections={collections}
+              title={title}
+              setTitle={(newTitle: string) => updateUserData({ title: newTitle })}
+              streakData={streakData}
+              isTodayComplete={isTodayComplete}
+              currentPodcastId={currentPodcastId}
+              isPlaying={isPlaying}
+              isPlayerExpanded={isPlayerExpanded}
+              setIsPlaying={setIsPlaying}
+              setIsPlayerExpanded={setIsPlayerExpanded}
+              updatePodcastProgress={updatePodcastProgress}
+              handlePlaybackEnd={handlePlaybackEnd}
+              customArtwork={customArtwork}
+              playbackRate={playbackRate}
+              setPlaybackRate={setPlaybackRate}
+              activePlayerTime={activePlayerTime}
+              setActivePlayerTime={setActivePlayerTime}
+              isSettingsOpen={isSettingsOpen}
+              setIsSettingsOpen={setIsSettingsOpen}
+              hideCompleted={hideCompleted}
+              setHideCompleted={(value: boolean) => updateUserData({ hideCompleted: value })}
+              reviewModeEnabled={reviewModeEnabled}
+              setReviewModeEnabled={(value: boolean) => updateUserData({ reviewModeEnabled: value })}
+              completionSound={completionSound}
+              setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
+              useCollectionsView={useCollectionsView}
+              setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
+              playOnNavigate={playOnNavigate}
+              setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
+              playerLayout={playerLayout}
+              setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+              lastPlayedCollectionId={lastPlayedCollectionId}
+              setLastPlayedCollectionId={(id: string | null) => updateUserData({ lastPlayedCollectionId: id })}
+              handleSetCustomArtwork={handleSetCustomArtwork}
+              dataToExport={data}
+              theme={theme}
+              setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
+              setLanguage={(lang: Language) => updateUserData({ language: lang })}
+              setStreakData={handleSetStreakData}
+              setPodcasts={(newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts })}
+              setCollections={(newCollections: Collection[]) => updateUserData({ collections: newCollections })}
+              unrecordCompletion={unrecordCompletion}
+              recordCompletion={recordCompletion}
+              allPodcastsSorted={allPodcastsSorted}
+              podcastsInCurrentView={podcastsInCurrentView}
+              reviewPrompt={reviewPrompt}
+              setReviewPrompt={setReviewPrompt}
+              setNextPodcastOnEnd={setNextPodcastOnEnd}
+              startPlayback={startPlayback}
+              isCategorizeModalOpen={isCategorizeModalOpen}
+              setIsCategorizeModalOpen={setIsCategorizeModalOpen}
+              podcastsToCategorize={podcastsToCategorize}
+              setPodcastsToCategorize={setPodcastsToCategorize}
+              isCreateCollectionModalOpen={isCreateCollectionModalOpen}
+              setIsCreateCollectionModalOpen={setIsCreateCollectionModalOpen}
+              currentView={currentView}
+              setCurrentView={setCurrentView}
+              isClearDataModalOpen={isClearDataModalOpen}
+              setIsClearDataModalOpen={setIsClearDataModalOpen}
+              isLoading={isLoading}
+              onFileUpload={handleFileUpload}
+              // Fix: Corrected prop names to pass the correct handler functions to the AppUI component.
+              onDeletePodcast={handleDeletePodcast}
+              onDeleteCollection={handleDeleteCollection}
+              onResetProgress={handleResetProgress}
+              onClearLocalFiles={handleClearLocalFiles}
+              onResetPreloaded={handleResetPreloaded}
+              onClearAll={handleClearAll}
+              onUpdatePreloadedData={handleUpdatePreloadedData}
+              totalStorageUsed={totalStorageUsed}
+          />
+          
+          {currentPodcast && (
+              <Player
+              key={currentPodcast.id}
+              podcast={currentPodcast}
+              isPlaying={isPlaying}
+              setIsPlaying={setIsPlaying}
+              onProgressSave={updatePodcastProgress}
+              onEnded={handlePlaybackEnd}
+              isPlayerExpanded={isPlayerExpanded}
+              setIsPlayerExpanded={setIsPlayerExpanded}
+              artworkUrl={customArtwork}
+              playbackRate={playbackRate}
+              onPlaybackRateChange={setPlaybackRate}
+              currentTime={activePlayerTime}
+              onCurrentTimeUpdate={setActivePlayerTime}
+              onDurationFetch={updatePodcastDuration}
+              userId={user.uid}
+              layoutMode={playerLayout}
+              setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+              showPlaybackSpeedControl={showPlaybackSpeedControl}
+              setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
+              />
+          )}
+          </div>
+      </LanguageProvider>
+    </>
   );
 }
 
