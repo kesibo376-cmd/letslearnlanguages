@@ -140,8 +140,10 @@ export function useUserData(userId?: string) {
                     const userState = userStateMap.get(defaultPodcast.url);
                     // If state exists for this URL, merge it with the fresh default podcast object.
                     if (userState) {
-                        // Preserve the fetched duration if it exists, otherwise use the default.
-                        const duration = (userState.duration && userState.duration > 0) ? userState.duration : defaultPodcast.duration;
+                        // Preserve the fetched duration if it exists and is a valid number, otherwise use the default.
+                        const duration = (userState.duration && !isNaN(userState.duration) && userState.duration > 0)
+                            ? userState.duration
+                            : defaultPodcast.duration;
                         return { ...defaultPodcast, progress: userState.progress, isListened: userState.isListened, duration };
                     }
                     return defaultPodcast;

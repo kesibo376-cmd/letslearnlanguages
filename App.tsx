@@ -5,7 +5,6 @@ import { useAuth } from './hooks/useAuth';
 import { useUserData } from './hooks/useUserData';
 import { v4 as uuidv4 } from 'uuid';
 import * as db from './lib/db';
-import { db as firestore } from './firebase';
 
 import Player from './components/Player';
 import AuthForm from './components/AuthForm';
@@ -161,24 +160,18 @@ export default function App() {
 
       if (validResults.length > 0) {
         console.log(`[Duration Fetch] Successfully fetched ${validResults.length} durations.`);
-        try {
-          const docRef = firestore.collection('users').doc(user.uid);
-          const docSnap = await docRef.get();
-          if (docSnap.exists) {
-            const latestData = docSnap.data();
-            const latestPodcasts = latestData.podcasts || [];
-            const durationMap = new Map(validResults.map(item => [item.id, item.duration]));
-            const updatedPodcasts = latestPodcasts.map((p: Podcast) => {
-              if (durationMap.has(p.id)) {
+        // The `podcasts` variable from the useEffect's scope is the state that triggered this fetch.
+        // We will create the new state based on it, which is safer than re-fetching from Firestore
+        // and creating a race condition. The `useUserData` hook's `onSnapshot` listener
+        // will handle merging any other concurrent changes.
+        const durationMap = new Map(validResults.map(item => [item.id, item.duration]));
+        const updatedPodcasts = podcasts.map((p: Podcast) => {
+            if (durationMap.has(p.id)) {
                 return { ...p, duration: durationMap.get(p.id)! };
-              }
-              return p;
-            });
-            updateUserData({ podcasts: updatedPodcasts });
-          }
-        } catch (error) {
-          console.error("[Duration Fetch] Error getting latest user data to update durations:", error);
-        }
+            }
+            return p;
+        });
+        updateUserData({ podcasts: updatedPodcasts });
       }
     };
 
