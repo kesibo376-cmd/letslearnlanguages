@@ -55,7 +55,6 @@ const Player: React.FC<PlayerProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
-  const [isReadyForPlayback, setIsReadyForPlayback] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -63,7 +62,6 @@ const Player: React.FC<PlayerProps> = ({
     console.error(`Failed to load audio source for: ${podcast.name}`);
     alert(`Error: Could not load audio for "${podcast.name}". The source might be unavailable or the format is not supported.`);
     setIsLoading(false);
-    setIsReadyForPlayback(false);
     setIsPlaying(false);
   }, [podcast.name, setIsPlaying]);
 
@@ -76,7 +74,6 @@ const Player: React.FC<PlayerProps> = ({
 
     const loadSource = async () => {
       setIsLoading(true);
-      setIsReadyForPlayback(false);
       audio.pause();
 
       let src;
@@ -108,27 +105,31 @@ const Player: React.FC<PlayerProps> = ({
     };
   }, [podcast.id, podcast.storage, podcast.url, reloadKey, handleAudioError]);
 
-  // Effect 2: Control playback (play/pause) based on isPlaying state and readiness.
+  // Effect 2: Control playback based on `isPlaying` prop. This is critical for mobile compatibility.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !isReadyForPlayback) return;
+    if (!audio) return;
 
     if (isPlaying) {
+      // Don't wait for 'canplay'. Immediately call play() to preserve the user interaction context on mobile.
+      // The browser will buffer and play when ready.
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           if (error.name === 'NotAllowedError') {
-            console.warn("Autoplay was prevented by browser.");
-            setIsPlaying(false);
-          } else if (error.name !== 'AbortError') {
+            console.warn("Playback was prevented by the browser. This can happen on mobile if play() is not called directly in a user event handler.");
+            setIsPlaying(false); // Inform parent component that playback failed
+          } else if (error.name !== 'AbortError') { // AbortError is expected if we change tracks quickly
             console.error("Error playing audio:", error);
+            handleAudioError();
           }
         });
       }
     } else {
       audio.pause();
     }
-  }, [isPlaying, isReadyForPlayback, setIsPlaying]);
+  }, [isPlaying, handleAudioError, setIsPlaying]);
+
 
   // Effect 3: Sync playback rate to the audio element.
   useEffect(() => {
@@ -218,7 +219,6 @@ const Player: React.FC<PlayerProps> = ({
   
   const handleCanPlay = () => {
     setIsLoading(false);
-    setIsReadyForPlayback(true);
   };
   
   const handleWaiting = () => {
@@ -255,7 +255,7 @@ const Player: React.FC<PlayerProps> = ({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <h3 className="text-4xl font-bold text-brand-text mb-2">{formatTime((podcast.duration || 0) - currentTime)}</h3>
-            <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
+            <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
               {isLoading ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -307,7 +307,7 @@ const Player: React.FC<PlayerProps> = ({
           <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
-          <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading && !isReadyForPlayback} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
+          <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
              {isLoading ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -398,7 +398,7 @@ const Player: React.FC<PlayerProps> = ({
               <button onClick={(e) => handleSkip(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
                 <RedoIcon size={20} className="backward -scale-x-100" />
               </button>
-              <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} disabled={isLoading && !isReadyForPlayback} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
+              <button onClick={handleTogglePlayPause} onTouchEnd={handleTouchEndTogglePlayPause} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
                 {isLoading ? (
                   <svg className="animate-spin h-5 w-5 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
