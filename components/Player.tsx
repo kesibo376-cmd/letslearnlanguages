@@ -66,7 +66,10 @@ const Player: React.FC<PlayerProps> = ({
 
     const loadAudio = async () => {
       setIsLoadingSrc(true);
-      // Reset src to ensure the audio element detects a change and re-loads
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
       setAudioSrc(undefined);
 
       if (podcast.storage === 'indexeddb') {
@@ -82,7 +85,7 @@ const Player: React.FC<PlayerProps> = ({
           console.error("Error loading audio from IndexedDB:", error);
           alert("Could not load audio file. It may have been deleted.");
           setAudioSrc(undefined);
-          setIsLoadingSrc(false); // Stop loading on error
+          setIsLoadingSrc(false);
         }
       } else {
         setAudioSrc(podcast.url);
@@ -98,17 +101,14 @@ const Player: React.FC<PlayerProps> = ({
     };
   }, [podcast.id, podcast.url, podcast.storage, reloadKey]);
 
-  // --- Mobile Loading Fix ---
-  // Explicitly call load() when the src attribute changes.
-  // This can help on mobile browsers that are strict about media loading.
   useEffect(() => {
     if (audioRef.current && audioSrc) {
+        audioRef.current.src = audioSrc;
         audioRef.current.load();
     }
   }, [audioSrc]);
 
   // --- Robust Playback Control Effect ---
-  // This is the single source of truth for commanding the audio element.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || isLoadingSrc) return;
@@ -118,8 +118,9 @@ const Player: React.FC<PlayerProps> = ({
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           console.error("Audio playback failed:", error);
-          // If play is rejected, sync the state back to false.
-          setIsPlaying(false);
+          if (error.name !== 'AbortError') {
+             setIsPlaying(false);
+          }
         });
       }
     } else {
@@ -140,9 +141,8 @@ const Player: React.FC<PlayerProps> = ({
     setIsPlaying(p => !p);
   }, [setIsPlaying]);
 
-  // Handler for touch events to prevent issues like long-press not firing click on mobile.
   const handleTouchEndTogglePlayPause = useCallback((e: React.TouchEvent) => {
-    e.preventDefault(); // Prevents the browser from firing a 'click' event after the touch.
+    e.preventDefault();
     handleTogglePlayPause(e);
   }, [handleTogglePlayPause]);
 
@@ -150,7 +150,6 @@ const Player: React.FC<PlayerProps> = ({
   // --- Keyboard Shortcuts ---
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore key presses if the user is typing in an input field.
       const target = event.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -163,11 +162,9 @@ const Player: React.FC<PlayerProps> = ({
       
       if (event.key.toLowerCase() === 'f') {
         event.preventDefault();
-        // Toggles between mini-player and expanded player
         setIsPlayerExpanded(prev => !prev);
       } else if (event.key === ' ' && isPlayerExpanded) {
-        // Toggles play/pause only when player is expanded
-        event.preventDefault(); // Prevent page from scrolling
+        event.preventDefault();
         handleTogglePlayPause();
       }
     };
@@ -185,7 +182,7 @@ const Player: React.FC<PlayerProps> = ({
     const newTime = Math.max(0, Math.min(podcast.duration || 0, audioRef.current.currentTime + seconds));
     audioRef.current.currentTime = newTime;
     onCurrentTimeUpdate(newTime);
-    onProgressSave(podcast.id, newTime); // Save immediately on skip
+    onProgressSave(podcast.id, newTime);
   }, [podcast.id, podcast.duration, onCurrentTimeUpdate, onProgressSave]);
 
   const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -207,8 +204,6 @@ const Player: React.FC<PlayerProps> = ({
 
   const handleReloadAudio = useCallback(() => {
     setIsSettingsMenuOpen(false);
-    // Pause playback and trigger the loading useEffect by updating reloadKey.
-    // The `onLoadedMetadata` handler will restore the current time upon successful reload.
     if (audioRef.current) {
         audioRef.current.pause();
     }
@@ -236,31 +231,23 @@ const Player: React.FC<PlayerProps> = ({
     if (!podcast.duration || podcast.duration === 0) {
       onDurationFetch(podcast.id, audio.duration);
     }
-    // Restore state from props. `currentTime` is the source of truth.
     audio.currentTime = currentTime;
     audio.playbackRate = playbackRate;
 
-    // The source has loaded enough to play, so we can stop showing the loading state.
-    // This triggers the playback effect if `isPlaying` is true.
     setIsLoadingSrc(false);
   };
 
   const handleAudioError = useCallback(() => {
     console.error(`Failed to load audio source for: ${podcast.name}`);
     alert(`Error: Could not load audio for "${podcast.name}". The source might be unavailable or the format is not supported.`);
-    setIsLoadingSrc(false); // Stop loading state
-    setIsPlaying(false); // Stop trying to play
+    setIsLoadingSrc(false);
+    setIsPlaying(false);
   }, [podcast.name, setIsPlaying]);
 
   const handleAudioEnded = useCallback(() => {
-    // Cancel any pending debounced progress updates to prevent a race condition
-    // where a stale progress update might overwrite the completed state.
     if (progressUpdateDebounceRef.current) {
       clearTimeout(progressUpdateDebounceRef.current);
     }
-    // Fire one last progress update to ensure the audio is marked as complete
-    // and the completion is recorded for streaks. The parent's onEnded handler
-    // will then reset the progress to 0 for replayability.
     if (podcast.duration > 0) {
       onProgressSave(podcast.id, podcast.duration);
     }
@@ -268,8 +255,6 @@ const Player: React.FC<PlayerProps> = ({
   }, [podcast.id, podcast.duration, onProgressSave, onEnded]);
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    // When the player is expanded, prevent default touch actions like scrolling
-    // to make it a "no scroll zone".
     e.preventDefault();
   };
 
@@ -353,13 +338,11 @@ const Player: React.FC<PlayerProps> = ({
     <>
       <audio
         ref={audioRef}
-        src={audioSrc}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleAudioEnded}
         onLoadedMetadata={handleLoadedMetadata}
         onError={handleAudioError}
         preload="metadata"
-        autoPlay={isPlaying}
       />
       <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
         {/* Expanded Player */}
