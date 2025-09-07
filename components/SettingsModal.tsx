@@ -507,3 +507,4 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 };
 
 export default SettingsModal;
+///changes 
