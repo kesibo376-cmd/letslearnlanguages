@@ -15,6 +15,7 @@ import WarningIcon from './icons/WarningIcon';
 import ShieldIcon from './icons/ShieldIcon';
 import UserCheckIcon from './icons/UserCheckIcon';
 import UserXIcon from './icons/UserXIcon';
+import SyncIcon from './icons/SyncIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface SettingsModalProps {
@@ -44,6 +45,7 @@ interface SettingsModalProps {
   totalStorageUsed: number;
   user: User;
   onLogout: () => void;
+  onUpdatePreloadedData: () => void;
 }
 
 const THEMES: { id: Theme; name: string }[] = [
@@ -83,7 +85,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
     onSetReviewModeEnabled, customArtwork, onSetCustomArtwork, onExportData,
     onImportData, completionSound, onSetCompletionSound,
     playOnNavigate, onSetPlayOnNavigate, totalStorageUsed,
-    user, onLogout, playerLayout, onSetPlayerLayout
+    user, onLogout, playerLayout, onSetPlayerLayout, onUpdatePreloadedData
   } = props;
 
   const { t, language } = useTranslation();
@@ -328,6 +330,10 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
         <DatabaseIcon size={24} className="text-brand-text-secondary flex-shrink-0"/>
         <div><p className="font-semibold">{t('settings.data.storage')}</p><p className="text-sm text-brand-text-secondary">{t('settings.data.storageSub', { size: formatBytes(totalStorageUsed) })}</p></div>
       </div>
+      <button onClick={onUpdatePreloadedData} className="w-full text-left p-3 bg-brand-surface-light hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border flex items-center gap-3">
+        <SyncIcon size={20} className="text-brand-text-secondary flex-shrink-0"/>
+        <div><p className="font-semibold">{t('settings.data.update')}</p><p className="text-sm text-brand-text-secondary">{t('settings.data.updateSub')}</p></div>
+      </button>
       <button onClick={onExportData} className="w-full text-left p-3 bg-brand-surface-light hover:bg-opacity-75 rounded-md transition-colors duration-200 b-border flex items-center gap-3">
         <DownloadIcon size={20} className="text-brand-text-secondary flex-shrink-0"/>
         <div><p className="font-semibold">{t('settings.data.export')}</p><p className="text-sm text-brand-text-secondary">{t('settings.data.exportSub')}</p></div>

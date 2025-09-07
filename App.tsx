@@ -1,12 +1,8 @@
-
-
-
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useAuth } from './hooks/useAuth';
-import { useUserData } from './hooks/useUserData';
+import { useUserData, getDefaultData } from './hooks/useUserData';
 import { v4 as uuidv4 } from 'uuid';
 import * as db from './lib/db';
 import { db as firestore } from './firebase';
@@ -536,6 +532,43 @@ export default function App() {
      }
   };
   
+  const handleUpdatePreloadedData = useCallback(async () => {
+    if (!user) return;
+    setIsLoading(true);
+
+    const defaultData = getDefaultData();
+    const defaultPreloadedPodcasts = defaultData.podcasts.filter((p: Podcast) => p.storage === 'preloaded');
+    const defaultPreloadedCollections = defaultData.collections;
+    
+    const existingCollectionIds = new Set(collections.map((c: Collection) => c.id));
+    const missingCollections = defaultPreloadedCollections.filter((c: Collection) => !existingCollectionIds.has(c.id));
+
+    const existingPodcastIds = new Set(podcasts.map((p: Podcast) => p.id));
+    const missingPodcasts = defaultPreloadedPodcasts.filter((p: Podcast) => !existingPodcastIds.has(p.id));
+
+    if (missingCollections.length === 0 && missingPodcasts.length === 0) {
+        alert("Your preloaded content is already up-to-date.");
+        setIsLoading(false);
+        return;
+    }
+
+    const updatedCollections = [...collections, ...missingCollections];
+    const updatedPodcasts = [...podcasts, ...missingPodcasts];
+
+    try {
+        await updateUserData({
+            collections: updatedCollections,
+            podcasts: updatedPodcasts
+        });
+        alert(`Successfully added ${missingCollections.length} new collection(s) and ${missingPodcasts.length} new audio file(s). Your library is now up to date.`);
+    } catch (error) {
+        console.error("Failed to update preloaded data:", error);
+        alert("An error occurred while updating. Please try again.");
+    } finally {
+        setIsLoading(false);
+    }
+  }, [user, podcasts, collections, updateUserData]);
+
   const currentPodcast = useMemo(() => 
     podcasts.find(p => p.id === currentPodcastId),
     [podcasts, currentPodcastId]
@@ -671,14 +704,11 @@ export default function App() {
             isLoading={isLoading}
             onFileUpload={handleFileUpload}
             onDeletePodcast={handleDeletePodcast}
-            // Fix: Pass correct handler function `handleResetProgress` for `onResetProgress` prop.
             onResetProgress={handleResetProgress}
-            // Fix: Pass correct handler function `handleClearLocalFiles` for `onClearLocalFiles` prop.
             onClearLocalFiles={handleClearLocalFiles}
-            // Fix: Pass correct handler function `handleResetPreloaded` for `onResetPreloaded` prop.
             onResetPreloaded={handleResetPreloaded}
-            // Fix: Pass correct handler function `handleClearAll` for `onClearAll` prop.
             onClearAll={handleClearAll}
+            onUpdatePreloadedData={handleUpdatePreloadedData}
             totalStorageUsed={totalStorageUsed}
         />
         

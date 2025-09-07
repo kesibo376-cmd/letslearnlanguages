@@ -89,6 +89,7 @@ interface AppUIProps {
     onClearLocalFiles: () => void;
     onResetPreloaded: () => void;
     onClearAll: () => void;
+    onUpdatePreloadedData: () => void;
     totalStorageUsed: number;
 }
 
@@ -104,7 +105,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
     allPodcastsSorted, podcastsInCurrentView, reviewPrompt, setReviewPrompt, setNextPodcastOnEnd, startPlayback, isCategorizeModalOpen,
     setIsCategorizeModalOpen, podcastsToCategorize, setPodcastsToCategorize, isCreateCollectionModalOpen,
     setIsCreateCollectionModalOpen, currentView, setCurrentView, isClearDataModalOpen,
-    setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, totalStorageUsed
+    setIsClearDataModalOpen, isLoading, onFileUpload, onDeletePodcast, onResetProgress, onClearLocalFiles, onResetPreloaded, onClearAll, onUpdatePreloadedData, totalStorageUsed
   } = props;
 
   const { t } = useTranslation();
@@ -309,6 +310,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
           totalStorageUsed={totalStorageUsed}
           user={user}
           onLogout={onLogout}
+          onUpdatePreloadedData={onUpdatePreloadedData}
       />
 
        <ReviewModal
