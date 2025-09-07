@@ -89,7 +89,7 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
 
   // Spanish I (30 files)
     ...Array.from({ length: 30 }, (_, i) => ({
-        url: `https://dynamic-manatee-2d9de3.netlify.app/spanish-i/pimsleur%20-%20spanish%20i%20-%20lesson%20${String(i + 1).padStart(2, '0')}.mp3`,
+        url: `https://dynamic-manatee-2d9de3.netlify.app/${i + 1}.mp3`,
         collectionName: 'Spanish I',
     })),
 ];
