@@ -13,17 +13,44 @@ const DEFAULT_STREAK_DATA: StreakData = {
   history: [],
 };
 
+const getStableIdFromUrl = (url: string) => {
+  const marker = '.netlify.app/';
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex > -1) {
+    const path = url.substring(markerIndex + marker.length);
+    return `preloaded-${path}`;
+  }
+  // Fallback for different URLs
+  return `preloaded-${url}`;
+};
+
+const getNameFromUrl = (url: string): string => {
+  try {
+    const filename = url.substring(url.lastIndexOf('/') + 1);
+    const decodedFilename = decodeURIComponent(filename);
+    return decodedFilename.replace(/\.[^/.]+$/, "");
+  } catch (e) {
+    return 'Untitled';
+  }
+};
+
 export const getDefaultData = () => ({
-    podcasts: PRELOADED_PODCAST_URLS.map((item, index) => ({
-      id: `preloaded-${index}`,
-      name: `Preloaded Audio ${index + 1}`,
-      url: item.url,
-      duration: 0, // Will be fetched on playback
-      progress: 0,
-      isListened: false,
-      storage: 'preloaded' as const,
-      collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
-    })),
+    podcasts: PRELOADED_PODCAST_URLS.map((item) => {
+      let name = getNameFromUrl(item.url);
+      if (item.collectionName === 'JP Foundation') {
+        name = `Lesson ${name}`;
+      }
+      return {
+        id: getStableIdFromUrl(item.url),
+        name: name,
+        url: item.url,
+        duration: 0,
+        progress: 0,
+        isListened: false,
+        storage: 'preloaded' as const,
+        collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
+      };
+    }),
     collections: PRELOADED_PODCAST_URLS
         .filter(p => p.collectionName)
         .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
@@ -49,6 +76,37 @@ export function useUserData(userId?: string) {
     const [isDataLoading, setIsDataLoading] = useState(true);
     const [data, setData] = useState<any | null>(null);
 
+    // Fix: Define `updateUserData` to handle updating user data in Firestore.
+    const updateUserData = useCallback((updates: Partial<any> | null) => {
+        if (!userId) {
+            console.warn("updateUserData called without a userId.");
+            return;
+        }
+
+        const docRef = db.collection('users').doc(userId);
+
+        if (updates === null) {
+            // Handle reset to default
+            const defaultData = getDefaultData();
+            // Preserve essential user info that shouldn't be reset
+            const userDataToPreserve = {
+                email: data?.email,
+                status: data?.status,
+                createdAt: data?.createdAt,
+            };
+            const dataToSet = { ...defaultData, ...userDataToPreserve };
+            
+            docRef.set(dataToSet).catch(err => {
+                console.error("Error resetting user data:", err);
+            });
+        } else {
+            // Handle partial update
+            docRef.update(updates).catch(err => {
+                console.error("Error updating user data:", err);
+            });
+        }
+    }, [userId, data]);
+
     useEffect(() => {
         if (!userId) {
             setData(null);
@@ -56,18 +114,44 @@ export function useUserData(userId?: string) {
             return;
         }
 
-        // FIX: Use v8 compat syntax for document reference
         const docRef = db.collection('users').doc(userId);
 
-        // FIX: Use v8 compat syntax for onSnapshot and check .exists property
         const unsubscribe = docRef.onSnapshot((docSnap) => {
             if (docSnap.exists) {
-                setData(docSnap.data());
+                const userData = docSnap.data();
+                const defaultData = getDefaultData();
+
+                const userPodcastIds = new Set((userData.podcasts || []).map(p => p.id));
+                const missingPodcasts = defaultData.podcasts.filter(p => !userPodcastIds.has(p.id));
+
+                const userCollectionsIds = new Set((userData.collections || []).map(c => c.id));
+                const missingCollections = defaultData.collections.filter(c => !userCollectionsIds.has(c.id));
+                
+                const dataWithDefaults = { ...defaultData, ...userData };
+                
+                if (missingPodcasts.length > 0 || missingCollections.length > 0) {
+                    const finalPodcasts = [...(dataWithDefaults.podcasts || []), ...missingPodcasts];
+                    const finalCollections = [...(dataWithDefaults.collections || []), ...missingCollections];
+                    
+                    // Optimistically update local state for immediate UI response
+                    setData({
+                        ...dataWithDefaults,
+                        podcasts: finalPodcasts,
+                        collections: finalCollections,
+                    });
+
+                    // Persist the changes back to Firestore
+                    docRef.update({
+                        podcasts: finalPodcasts,
+                        collections: finalCollections
+                    }).catch(err => console.error("Failed to persist merged preloaded data:", err));
+                } else {
+                    // No new content, just set the data from firestore merged with defaults
+                    setData(dataWithDefaults);
+                }
             } else {
-                // User document doesn't exist, so this is a new user.
-                // The signup function in AuthContext will create the initial document.
                 console.log("No user data found for UID:", userId);
-                setData(null); // Or some indicator that it's a new user
+                setData(null);
             }
             setIsDataLoading(false);
         }, (error) => {
@@ -75,39 +159,7 @@ export function useUserData(userId?: string) {
             setIsDataLoading(false);
         });
 
-        return () => unsubscribe(); // Cleanup listener on unmount
-    }, [userId]);
-    
-    const updateUserData = useCallback(async (updates: Partial<any> | null) => {
-        if (!userId) return;
-        // FIX: Use v8 compat syntax for document reference
-        const docRef = db.collection('users').doc(userId);
-        try {
-            if (updates === null) {
-              // A null update means reset the user's data to default
-              // FIX: Use v8 compat syntax for set()
-              await docRef.set(getDefaultData());
-            } else {
-              // Using updateDoc directly is simpler and more robust for offline scenarios.
-              // It will fail if the document doesn't exist, but that's the correct
-              // behavior for an update. We handle that failure below.
-              // FIX: Use v8 compat syntax for update()
-              await docRef.update(updates);
-            }
-        } catch (error) {
-            console.error("Error updating user data:", error);
-            // If update fails because doc doesn't exist (e.g. race condition on signup),
-            // we can try to create it with the merged data as a fallback.
-            if (error instanceof Error && 'code' in error && (error as any).code === 'not-found') {
-                console.log("Document not found, creating it with merged data.");
-                try {
-                    // FIX: Use v8 compat syntax for set()
-                    await docRef.set({ ...getDefaultData(), ...updates });
-                } catch (e) {
-                    console.error("Error creating document after update failed:", e);
-                }
-            }
-        }
+        return () => unsubscribe();
     }, [userId]);
     
     const defaultData = useMemo(() => getDefaultData(), []);
