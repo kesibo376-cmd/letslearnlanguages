@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -635,7 +636,6 @@ export default function App() {
             completionSound={completionSound}
             setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
             useCollectionsView={useCollectionsView}
-            setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
             playOnNavigate={playOnNavigate}
             setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
             playerLayout={playerLayout}
