@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Theme, StreakData, StreakDifficulty, CompletionSound, User, LayoutMode, Language } from '../types';
 import { formatBytes } from '../lib/utils';
 import { db } from '../firebase';
@@ -16,6 +16,8 @@ import ShieldIcon from './icons/ShieldIcon';
 import UserCheckIcon from './icons/UserCheckIcon';
 import UserXIcon from './icons/UserXIcon';
 import { useTranslation } from '../contexts/LanguageContext';
+import ChevronRightIcon from './icons/ChevronRightIcon';
+import ChevronLeftIcon from './icons/ChevronLeftIcon';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -91,24 +93,31 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   const { t, language } = useTranslation();
   const isAdmin = user.email === 'maxence.poskin@gmail.com';
 
-  const CATEGORIES = [
+  const CATEGORIES = useMemo(() => [
     { id: 'account', label: t('settings.categories.account'), icon: UserIcon },
     { id: 'appearance', label: t('settings.categories.appearance'), icon: PaintBrushIcon },
     { id: 'features', label: t('settings.categories.features'), icon: SparklesIcon },
     { id: 'data', label: t('settings.categories.data'), icon: DatabaseIcon },
     ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: ShieldIcon }] : []),
     { id: 'danger', label: t('settings.categories.danger'), icon: WarningIcon, isDanger: true },
-  ];
+  ], [t, isAdmin]);
 
   const [activeCategory, setActiveCategory] = useState('account');
+  const [mobileView, setMobileView] = useState<'list' | string>('list');
   const importInputRef = React.useRef<HTMLInputElement>(null);
   const [artworkUrl, setArtworkUrl] = useState(customArtwork || '');
   const [pendingUsers, setPendingUsers] = useState<{ id: string; email: string; createdAt?: any }[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
+  const currentMobileCategory = useMemo(() => {
+    if (mobileView === 'list') return null;
+    return CATEGORIES.find(c => c.id === mobileView);
+  }, [mobileView, CATEGORIES]);
+  
   useEffect(() => {
     if (isOpen) {
       setActiveCategory('account');
+      setMobileView('list');
       setArtworkUrl(customArtwork || '');
     }
   }, [isOpen, customArtwork]);
@@ -149,10 +158,10 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
 
   useEffect(() => {
-    if (isOpen && isAdmin && activeCategory === 'admin') {
+    if (isOpen && isAdmin && (activeCategory === 'admin' || mobileView === 'admin')) {
       fetchPendingUsers();
     }
-  }, [isOpen, isAdmin, activeCategory, fetchPendingUsers]);
+  }, [isOpen, isAdmin, activeCategory, mobileView, fetchPendingUsers]);
   
   const handleUserApproval = async (userId: string, newStatus: 'approved' | 'denied') => {
     try {
@@ -448,13 +457,42 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             
             <div className="flex-grow min-w-0">
               {/* Mobile View */}
-              <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-2 -mr-2 md:hidden">
-                <AccountSection />
-                <AppearanceSection />
-                <FeaturesSection />
-                <DataSection />
-                {isAdmin && <AdminSection />}
-                <DangerSection />
+              <div className="md:hidden max-h-[calc(100vh-150px)]">
+                  {mobileView === 'list' ? (
+                      <nav className="space-y-2 animate-fade-in">
+                          {CATEGORIES.map(cat => (
+                              <button
+                                  key={cat.id}
+                                  onClick={() => setMobileView(cat.id)}
+                                  className={`w-full flex items-center justify-between text-left p-4 rounded-md transition-colors duration-200 b-border ${
+                                      cat.isDanger 
+                                      ? 'bg-red-500/5 hover:bg-red-500/10 text-red-500' 
+                                      : 'bg-brand-surface-light hover:bg-brand-surface'
+                                  }`}
+                              >
+                                  <div className="flex items-center gap-4">
+                                      <cat.icon size={22} className={cat.isDanger ? 'text-red-500' : 'text-brand-text-secondary'} />
+                                      <span className="font-semibold">{cat.label}</span>
+                                  </div>
+                                  <ChevronRightIcon size={20} className="text-brand-text-secondary" />
+                              </button>
+                          ))}
+                      </nav>
+                  ) : (
+                      <div className="animate-fade-in flex flex-col h-full">
+                          <div className="flex-shrink-0 relative flex items-center justify-center mb-4 pb-4 border-b border-brand-surface-light">
+                              <button onClick={() => setMobileView('list')} className="absolute left-0 p-2 -ml-2 text-brand-text-secondary hover:text-brand-text">
+                                  <ChevronLeftIcon size={24} />
+                              </button>
+                              <h3 className="text-xl font-bold text-brand-text">
+                                  {currentMobileCategory?.label}
+                              </h3>
+                          </div>
+                          <div className="flex-grow overflow-y-auto pr-2 -mr-2">
+                              {renderContent(mobileView)}
+                          </div>
+                      </div>
+                  )}
               </div>
 
               {/* Desktop View */}
