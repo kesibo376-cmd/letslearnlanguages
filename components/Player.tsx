@@ -7,6 +7,7 @@ import PauseIcon from './icons/PauseIcon';
 import ChevronDownIcon from './icons/ChevronDownIcon';
 import RedoIcon from './icons/RedoIcon';
 import SettingsIcon from './icons/SettingsIcon';
+import SyncIcon from './icons/SyncIcon';
 import ToggleSwitch from './ToggleSwitch';
 
 interface PlayerProps {
@@ -57,6 +58,7 @@ const Player: React.FC<PlayerProps> = ({
   const [audioSrc, setAudioSrc] = useState<string | undefined>(undefined);
   const [isLoadingSrc, setIsLoadingSrc] = useState(true);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // --- Audio Loading ---
   useEffect(() => {
@@ -85,8 +87,6 @@ const Player: React.FC<PlayerProps> = ({
       } else {
         setAudioSrc(podcast.url);
       }
-      // Note: setIsLoadingSrc(false) is removed from the success path.
-      // It's now handled by onLoadedMetadata or onError.
     };
 
     loadAudio();
@@ -96,7 +96,16 @@ const Player: React.FC<PlayerProps> = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [podcast.id, podcast.url, podcast.storage]);
+  }, [podcast.id, podcast.url, podcast.storage, reloadKey]);
+
+  // --- Mobile Loading Fix ---
+  // Explicitly call load() when the src attribute changes.
+  // This can help on mobile browsers that are strict about media loading.
+  useEffect(() => {
+    if (audioRef.current && audioSrc) {
+        audioRef.current.load();
+    }
+  }, [audioSrc]);
 
   // --- Robust Playback Control Effect ---
   // This is the single source of truth for commanding the audio element.
@@ -195,6 +204,17 @@ const Player: React.FC<PlayerProps> = ({
     const nextIndex = (currentIndex + 1) % PLAYBACK_RATES.length;
     onPlaybackRateChange(PLAYBACK_RATES[nextIndex]);
   }, [playbackRate, onPlaybackRateChange]);
+
+  const handleReloadAudio = useCallback(() => {
+    setIsSettingsMenuOpen(false);
+    // Pause playback and trigger the loading useEffect by updating reloadKey.
+    // The `onLoadedMetadata` handler will restore the current time upon successful reload.
+    if (audioRef.current) {
+        audioRef.current.pause();
+    }
+    setIsPlaying(false);
+    setReloadKey(k => k + 1);
+  }, [setIsPlaying]);
 
   // --- Audio Element Event Listeners ---
   const handleTimeUpdate = () => {
@@ -363,6 +383,10 @@ const Player: React.FC<PlayerProps> = ({
                           <label htmlFor="speed-toggle" className="font-semibold text-brand-text">Show Speed Control</label>
                           <ToggleSwitch isOn={showPlaybackSpeedControl} handleToggle={() => setShowPlaybackSpeedControl(!showPlaybackSpeedControl)} />
                       </div>
+                      <button onClick={handleReloadAudio} className="w-full flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border text-left hover:bg-brand-surface transition-colors">
+                          <div className="font-semibold text-brand-text">Refresh Player</div>
+                          <SyncIcon size={20} className="text-brand-text-secondary"/>
+                      </button>
                   </div>
               </div>
             </div>
