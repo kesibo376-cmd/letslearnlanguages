@@ -245,7 +245,14 @@ const Player: React.FC<PlayerProps> = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!dragState.isDragging || !isPlayerExpanded) return;
+    if (!isPlayerExpanded) return;
+
+    // Prevent default scroll/refresh behavior for any touch movement inside the expanded player.
+    // This creates the "no scroll zone" and makes button taps more reliable on mobile.
+    e.preventDefault();
+
+    if (!dragState.isDragging) return; // Only update drag state if a drag was initiated.
+
     const currentY = e.touches[0].clientY;
     const delta = Math.max(0, currentY - dragState.startY);
     setDragState(prev => ({ ...prev, deltaY: delta }));
