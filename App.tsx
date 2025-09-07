@@ -543,8 +543,10 @@ export default function App() {
     const existingCollectionIds = new Set(collections.map((c: Collection) => c.id));
     const missingCollections = defaultPreloadedCollections.filter((c: Collection) => !existingCollectionIds.has(c.id));
 
-    const existingPodcastIds = new Set(podcasts.map((p: Podcast) => p.id));
-    const missingPodcasts = defaultPreloadedPodcasts.filter((p: Podcast) => !existingPodcastIds.has(p.id));
+    const existingPreloadedPodcastUrls = new Set(
+      podcasts.filter(p => p.storage === 'preloaded').map(p => p.url)
+    );
+    const missingPodcasts = defaultPreloadedPodcasts.filter(p => !existingPreloadedPodcastUrls.has(p.url));
 
     if (missingCollections.length === 0 && missingPodcasts.length === 0) {
         alert("Your preloaded content is already up-to-date.");
