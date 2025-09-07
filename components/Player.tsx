@@ -64,6 +64,9 @@ const Player: React.FC<PlayerProps> = ({
 
     const loadAudio = async () => {
       setIsLoadingSrc(true);
+      // Reset src to ensure the audio element detects a change and re-loads
+      setAudioSrc(undefined);
+
       if (podcast.storage === 'indexeddb') {
         try {
           const blob = await db.getAudio(podcast.id);
@@ -77,11 +80,13 @@ const Player: React.FC<PlayerProps> = ({
           console.error("Error loading audio from IndexedDB:", error);
           alert("Could not load audio file. It may have been deleted.");
           setAudioSrc(undefined);
+          setIsLoadingSrc(false); // Stop loading on error
         }
       } else {
         setAudioSrc(podcast.url);
       }
-      setIsLoadingSrc(false);
+      // Note: setIsLoadingSrc(false) is removed from the success path.
+      // It's now handled by onLoadedMetadata or onError.
     };
 
     loadAudio();
@@ -214,7 +219,18 @@ const Player: React.FC<PlayerProps> = ({
     // Restore state from props. `currentTime` is the source of truth.
     audio.currentTime = currentTime;
     audio.playbackRate = playbackRate;
+
+    // The source has loaded enough to play, so we can stop showing the loading state.
+    // This triggers the playback effect if `isPlaying` is true.
+    setIsLoadingSrc(false);
   };
+
+  const handleAudioError = useCallback(() => {
+    console.error(`Failed to load audio source for: ${podcast.name}`);
+    alert(`Error: Could not load audio for "${podcast.name}". The source might be unavailable or the format is not supported.`);
+    setIsLoadingSrc(false); // Stop loading state
+    setIsPlaying(false); // Stop trying to play
+  }, [podcast.name, setIsPlaying]);
 
   const handleAudioEnded = useCallback(() => {
     // Cancel any pending debounced progress updates to prevent a race condition
@@ -315,7 +331,7 @@ const Player: React.FC<PlayerProps> = ({
 
   return (
     <>
-      <audio ref={audioRef} src={audioSrc} onTimeUpdate={handleTimeUpdate} onEnded={handleAudioEnded} onLoadedMetadata={handleLoadedMetadata} preload="metadata" />
+      <audio ref={audioRef} src={audioSrc} onTimeUpdate={handleTimeUpdate} onEnded={handleAudioEnded} onLoadedMetadata={handleLoadedMetadata} onError={handleAudioError} preload="metadata" />
       <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
         {/* Expanded Player */}
         <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} onTouchMove={handleTouchMove}>
