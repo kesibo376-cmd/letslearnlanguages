@@ -25,7 +25,7 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
   
   // Japanese I (30 files)
   ...Array.from({ length: 30 }, (_, i) => ({
-    url: `https://cheery-mooncake-49edfd.netlify.app/japanese%20i/japanese%20i%20-%20lesson%20${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://cheery-mooncake-49edfd.netlify.app/japanese%20i/japanese%20i%20%5B3rd%20ed%5D%20-%20lesson%20${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'Japanese I',
   })),
 
@@ -87,4 +87,3 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
     collectionName: 'Chinese V',
   })),
 ];
-// etc
