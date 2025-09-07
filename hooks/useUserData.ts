@@ -24,52 +24,47 @@ const getStableIdFromUrl = (url: string) => {
   return `preloaded-${url}`;
 };
 
-const getNameFromUrl = (url: string): string => {
-  try {
-    const filename = url.substring(url.lastIndexOf('/') + 1);
-    const decodedFilename = decodeURIComponent(filename);
-    return decodedFilename.replace(/\.[^/.]+$/, "");
-  } catch (e) {
-    return 'Untitled';
-  }
+export const getDefaultData = () => {
+    const lessonCounters: { [key: string]: number } = {};
+    return {
+        podcasts: PRELOADED_PODCAST_URLS.map((item) => {
+          const collectionName = item.collectionName || 'Untitled';
+          lessonCounters[collectionName] = (lessonCounters[collectionName] || 0) + 1;
+          const lessonNumber = lessonCounters[collectionName];
+          
+          const name = `${collectionName} ${lessonNumber}`;
+    
+          return {
+            id: getStableIdFromUrl(item.url),
+            name: name,
+            url: item.url,
+            duration: 0,
+            progress: 0,
+            isListened: false,
+            storage: 'preloaded' as const,
+            collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
+          };
+        }),
+        collections: PRELOADED_PODCAST_URLS
+            .filter(p => p.collectionName)
+            .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
+            .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i),
+        title: 'My Audio Library',
+        theme: 'brutalist' as Theme,
+        streakData: DEFAULT_STREAK_DATA,
+        hideCompleted: false,
+        reviewModeEnabled: false,
+        completionSound: 'minecraft' as CompletionSound,
+        useCollectionsView: true,
+        playOnNavigate: false,
+        hasCompletedOnboarding: false,
+        customArtwork: null,
+        playerLayout: 'pimsleur' as LayoutMode,
+        showPlaybackSpeedControl: true,
+        lastPlayedCollectionId: null,
+        language: 'en' as Language,
+    }
 };
-
-export const getDefaultData = () => ({
-    podcasts: PRELOADED_PODCAST_URLS.map((item) => {
-      let name = getNameFromUrl(item.url);
-      if (item.collectionName === 'JP Foundation') {
-        name = `Lesson ${name}`;
-      }
-      return {
-        id: getStableIdFromUrl(item.url),
-        name: name,
-        url: item.url,
-        duration: 0,
-        progress: 0,
-        isListened: false,
-        storage: 'preloaded' as const,
-        collectionId: item.collectionName ? item.collectionName.toLowerCase().replace(/\s+/g, '-') : null,
-      };
-    }),
-    collections: PRELOADED_PODCAST_URLS
-        .filter(p => p.collectionName)
-        .map(p => ({ id: p.collectionName!.toLowerCase().replace(/\s+/g, '-'), name: p.collectionName! }))
-        .filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i),
-    title: 'My Audio Library',
-    theme: 'brutalist' as Theme,
-    streakData: DEFAULT_STREAK_DATA,
-    hideCompleted: false,
-    reviewModeEnabled: false,
-    completionSound: 'minecraft' as CompletionSound,
-    useCollectionsView: true,
-    playOnNavigate: false,
-    hasCompletedOnboarding: false,
-    customArtwork: null,
-    playerLayout: 'pimsleur' as LayoutMode,
-    showPlaybackSpeedControl: true,
-    lastPlayedCollectionId: null,
-    language: 'en' as Language,
-});
 
 
 export function useUserData(userId?: string) {
