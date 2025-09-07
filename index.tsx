@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { DebugProvider } from './contexts/DebugContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,7 +13,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <DebugProvider>
+        <App />
+      </DebugProvider>
     </AuthProvider>
   </React.StrictMode>
 );

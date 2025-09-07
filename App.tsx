@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -13,6 +14,7 @@ import AppUI from './components/AppUI';
 import Confetti from './components/Confetti';
 import { LanguageProvider } from './contexts/LanguageContext';
 import OnboardingModal from './components/OnboardingModal';
+import DebugOverlay from './components/DebugOverlay';
 
 const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none' | 'random'>, string> = {
   minecraft: 'https://www.myinstants.com/media/sounds/levelup.mp3',
@@ -197,6 +199,15 @@ export default function App() {
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
   const [isAppReady, setIsAppReady] = useState(false);
   const [isMinLoadTimeMet, setIsMinLoadTimeMet] = useState(false);
+  const [isDebugMode, setIsDebugMode] = useState(false);
+
+  useEffect(() => {
+    // Check for debug mode on initial load
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('debug') === 'true') {
+      setIsDebugMode(true);
+    }
+  }, []);
 
   useEffect(() => {
     // Enforce a minimum loading time to prevent screen flicker on fast loads.
@@ -668,6 +679,7 @@ export default function App() {
   return (
     <LanguageProvider language={language || 'en'}>
         <div className="text-brand-text min-h-screen animate-fade-in">
+        {isDebugMode && <DebugOverlay />}
         <audio ref={soundAudioRef} preload="auto" />
         {showConfetti && <Confetti count={50} theme={theme} />}
 
@@ -737,6 +749,7 @@ export default function App() {
             setIsClearDataModalOpen={setIsClearDataModalOpen}
             isLoading={isLoading}
             onFileUpload={handleFileUpload}
+            // Fix: Corrected prop names to pass the correct handler functions to the AppUI component.
             onDeletePodcast={handleDeletePodcast}
             onDeleteCollection={handleDeleteCollection}
             onResetProgress={handleResetProgress}
