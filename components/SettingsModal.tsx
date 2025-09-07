@@ -434,7 +434,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
           <button onClick={onClose} aria-label="Close settings" className="text-brand-text-secondary hover:text-brand-text text-3xl leading-none">&times;</button>
         </div>
         
-        <div className="md:flex md:gap-8 flex-grow min-h-0">
+        <div className="flex flex-col md:flex-row md:gap-8 flex-grow min-h-0">
             {/* Desktop Navigation */}
             <aside className="hidden md:block w-48 flex-shrink-0">
                 <nav className="space-y-1">
