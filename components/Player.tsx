@@ -9,7 +9,6 @@ import RedoIcon from './icons/RedoIcon';
 import SettingsIcon from './icons/SettingsIcon';
 import SyncIcon from './icons/SyncIcon';
 import ToggleSwitch from './ToggleSwitch';
-import { useDebug } from '../contexts/DebugContext';
 
 interface PlayerProps {
   podcast: Podcast;
@@ -58,100 +57,93 @@ const Player: React.FC<PlayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const { log } = useDebug();
 
   const handleAudioError = useCallback(() => {
     const audio = audioRef.current;
     const error = audio ? audio.error : new Error('Audio element not available');
-    
-    const errorCode = error && 'code' in error ? error.code : 'N/A';
-    const errorMessage = error?.message || 'Unknown error';
-    log(`[Player Error] Failed to load: ${podcast.name}. Code: ${errorCode}. Message: ${errorMessage}`);
-    
+    console.error(`[Player Error] Failed to load audio source for: ${podcast.name}`, error);
     // Fix: The standard Error object does not have a 'code' property. Check if the property exists before accessing it.
-    alert(`Error: Could not load audio for "${podcast.name}". Code: ${errorCode}. Message: ${errorMessage}. Check console for more details.`);
+    const errorCode = error && 'code' in error ? error.code : 'N/A';
+    alert(`Error: Could not load audio for "${podcast.name}". Code: ${errorCode}. Message: ${error?.message}. Check console for more details.`);
     setIsLoading(false);
     setIsPlaying(false);
-  }, [podcast.name, setIsPlaying, log]);
+  }, [podcast.name, setIsPlaying]);
 
   // Effect 1: Load the audio source when the podcast changes.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     
-    log(`[Player] Effect triggered to load new podcast: "${podcast.name}"`);
+    console.log(`[Player] Effect triggered to load new podcast: "${podcast.name}"`);
     let objectUrl: string | undefined;
 
     const loadSource = async () => {
-      log(`[Player] loadSource() started for "${podcast.name}" (id: ${podcast.id})`);
+      console.log(`[Player] loadSource() started for "${podcast.name}" (id: ${podcast.id})`);
       setIsLoading(true);
       audio.pause();
 
       let src;
       if (podcast.storage === 'indexeddb') {
         try {
-          log(`[Player] Getting audio blob from IndexedDB for id: ${podcast.id}`);
+          console.log(`[Player] Getting audio blob from IndexedDB for id: ${podcast.id}`);
           const blob = await db.getAudio(podcast.id);
-          if (!blob) {
-            log('[Player Error] Blob not found in IndexedDB');
-            throw new Error('Blob not found in IndexedDB');
-          }
+          if (!blob) throw new Error('Blob not found in IndexedDB');
           objectUrl = URL.createObjectURL(blob);
           src = objectUrl;
-          log(`[Player] Created object URL from blob: ${src}`);
-        } catch (e: any) {
-          log(`[Player] Error loading from IndexedDB: ${e.message}`);
+          console.log(`[Player] Created object URL from blob: ${src}`);
+        } catch (e) {
+          console.error('[Player] Error loading from IndexedDB', e);
           handleAudioError();
           return;
         }
       } else {
         src = podcast.url;
-        log(`[Player] Using preloaded URL: ${src}`);
+        console.log(`[Player] Using preloaded URL: ${src}`);
       }
 
       audio.src = src;
-      log(`[Player] Set audio.src. Now calling audio.load().`);
+      console.log(`[Player] Set audio.src. Now calling audio.load().`);
       audio.load();
     };
 
     loadSource();
 
     return () => {
-      log(`[Player] Cleanup effect for "${podcast.name}"`);
+      console.log(`[Player] Cleanup effect for "${podcast.name}"`);
       if (objectUrl) {
-        log(`[Player] Revoking object URL: ${objectUrl}`);
+        console.log(`[Player] Revoking object URL: ${objectUrl}`);
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [podcast.id, podcast.storage, podcast.url, reloadKey, handleAudioError, log]);
+  }, [podcast.id, podcast.storage, podcast.url, reloadKey, handleAudioError]);
 
   // Effect 2: Sync state with the audio element for external changes (e.g., track ending)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    log(`[Player Sync] isPlaying: ${isPlaying}, audio.paused: ${audio.paused}, playbackRate: ${playbackRate}`);
+    console.log(`[Player Sync Effect] isPlaying: ${isPlaying}, audio.paused: ${audio.paused}, playbackRate: ${playbackRate}`);
     
     audio.playbackRate = playbackRate;
 
     if (isPlaying && audio.paused) {
-      log('[Player Sync] State is playing but audio is paused. Calling play().');
+      console.log('[Player Sync Effect] State is playing but audio is paused. Calling play().');
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           if (error.name === 'NotAllowedError') {
-            log("[Player Sync] Autoplay was prevented by browser. This is common on mobile. Reverting isPlaying state.");
+            console.warn("[Player Sync Effect] Autoplay was prevented by browser. This is common on mobile. Reverting isPlaying state.");
             setIsPlaying(false);
           } else {
-            log(`[Player Sync] Error during play(): ${error.name} - ${error.message}`);
+            console.error("[Player Sync Effect] Error during play():", error);
           }
         });
       }
     } else if (!isPlaying && !audio.paused) {
-      log('[Player Sync] State is not playing but audio is running. Calling pause().');
+      console.log('[Player Sync Effect] State is not playing but audio is running. Calling pause().');
       audio.pause();
     }
-  }, [isPlaying, playbackRate, setIsPlaying, log]);
+  }, [isPlaying, playbackRate, setIsPlaying]);
 
 
   // --- UI Event Handlers ---
@@ -159,29 +151,27 @@ const Player: React.FC<PlayerProps> = ({
     e?.stopPropagation();
     const audio = audioRef.current;
     if (!audio) {
-        log('[Player Action Error] handleTogglePlayPause called, but audioRef is null.');
+        console.error('[Player Action] handleTogglePlayPause called, but audioRef is null.');
         return;
     }
 
-    log('[Player Action] handleTogglePlayPause called.');
+    console.log('[Player Action] handleTogglePlayPause called.');
 
     const newIsPlayingState = !isPlaying;
     setIsPlaying(newIsPlayingState);
 
     if (newIsPlayingState) {
-      log('[Player Action] Attempting to play audio.');
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(error => {
-          log(`[Player Action] Playback prevented by browser. Error: ${error.name} - ${error.message}`);
+          console.warn("[Player Action] Playback prevented by browser.", error);
           setIsPlaying(false); // Revert state if it fails
         });
       }
     } else {
-      log('[Player Action] Pausing audio.');
       audio.pause();
     }
-  }, [isPlaying, setIsPlaying, log]);
+  }, [isPlaying, setIsPlaying]);
 
 
   const handleTouchEndTogglePlayPause = useCallback((e: React.TouchEvent) => {
@@ -250,7 +240,7 @@ const Player: React.FC<PlayerProps> = ({
   const handleLoadedMetadata = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    log(`[Player Event] onLoadedMetadata. Duration: ${audio.duration}`);
+    console.log(`[Player Event] onLoadedMetadata. Duration: ${audio.duration}`);
     if (isFinite(currentTime)) {
       audio.currentTime = currentTime;
     }
@@ -260,27 +250,27 @@ const Player: React.FC<PlayerProps> = ({
   
   const handleCanPlay = () => {
     setIsLoading(false);
-    log('[Player Event] onCanPlay. Ready to play.');
+    console.log('[Player Event] onCanPlay. Ready to play.');
   };
   
   const handleWaiting = () => {
     if (isPlaying) {
       setIsLoading(true);
-      log('[Player Event] onWaiting. Buffering...');
+      console.log('[Player Event] onWaiting. Buffering...');
     }
   };
 
   const handlePlaying = () => {
     setIsLoading(false);
-    log('[Player Event] onPlaying. Playback has started or resumed.');
+    console.log('[Player Event] onPlaying. Playback has started or resumed.');
   };
 
   const handleAudioEnded = useCallback(() => {
     if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
     if (podcast.duration > 0) onProgressSave(podcast.id, podcast.duration);
-    log(`[Player Event] onEnded for "${podcast.name}"`);
+    console.log(`[Player Event] onEnded for "${podcast.name}"`);
     onEnded();
-  }, [podcast.id, podcast.duration, podcast.name, onProgressSave, onEnded, log]);
+  }, [podcast.id, podcast.duration, podcast.name, onProgressSave, onEnded]);
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
     e.preventDefault();

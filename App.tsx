@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -14,7 +13,6 @@ import AppUI from './components/AppUI';
 import Confetti from './components/Confetti';
 import { LanguageProvider } from './contexts/LanguageContext';
 import OnboardingModal from './components/OnboardingModal';
-import DebugOverlay from './components/DebugOverlay';
 
 const COMPLETION_SOUND_URLS: Record<Exclude<CompletionSound, 'none' | 'random'>, string> = {
   minecraft: 'https://www.myinstants.com/media/sounds/levelup.mp3',
@@ -199,15 +197,6 @@ export default function App() {
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
   const [isAppReady, setIsAppReady] = useState(false);
   const [isMinLoadTimeMet, setIsMinLoadTimeMet] = useState(false);
-  const [isDebugMode, setIsDebugMode] = useState(false);
-
-  useEffect(() => {
-    // Check for debug mode on initial load
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('debug') === 'true') {
-      setIsDebugMode(true);
-    }
-  }, []);
 
   useEffect(() => {
     // Enforce a minimum loading time to prevent screen flicker on fast loads.
@@ -619,24 +608,16 @@ export default function App() {
   );
   
   if (!isAppReady || !isMinLoadTimeMet) {
-    return (
-      <>
-        {isDebugMode && <DebugOverlay />}
-        <LoadingSpinner />
-      </>
-    );
+    return <LoadingSpinner />;
   }
   
   if (!user) {
     return (
-      <>
-        {isDebugMode && <DebugOverlay />}
-        <LanguageProvider language={'en'}>
-          <div className="text-brand-text min-h-screen">
-              <AuthForm />
-          </div>
-        </LanguageProvider>
-      </>
+      <LanguageProvider language={'en'}>
+        <div className="text-brand-text min-h-screen">
+            <AuthForm />
+        </div>
+      </LanguageProvider>
     );
   }
 
@@ -644,166 +625,153 @@ export default function App() {
   if (status && user.email !== 'maxence.poskin@gmail.com') {
     if (status === 'pending') {
       return (
-        <>
-          {isDebugMode && <DebugOverlay />}
-          <LanguageProvider language={language || 'en'}>
-            <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
-              <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
-                <h1 className="text-2xl font-bold mb-4">Approval Pending</h1>
-                <p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p>
-                <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
-              </div>
+        <LanguageProvider language={language || 'en'}>
+          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
+            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
+              <h1 className="text-2xl font-bold mb-4">Approval Pending</h1>
+              <p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p>
+              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
             </div>
-          </LanguageProvider>
-        </>
+          </div>
+        </LanguageProvider>
       );
     }
     if (status === 'denied') {
       return (
-        <>
-          {isDebugMode && <DebugOverlay />}
-          <LanguageProvider language={language || 'en'}>
-            <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
-              <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
-                <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-                <p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p>
-                <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
-              </div>
+        <LanguageProvider language={language || 'en'}>
+          <div className="text-brand-text min-h-screen flex items-center justify-center p-4">
+            <div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md">
+              <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
+              <p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p>
+              <button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button>
             </div>
-          </LanguageProvider>
-        </>
+          </div>
+        </LanguageProvider>
       );
     }
   }
   
   if (!hasCompletedOnboarding) {
     return (
-      <>
-        {isDebugMode && <DebugOverlay />}
-        <LanguageProvider language={language || 'en'}>
-          <div className="text-brand-text min-h-screen animate-fade-in">
-            <OnboardingModal
-              isOpen={true}
-              onComplete={handleOnboardingComplete}
-              onImportData={(file) => handleImportData(file, handleOnboardingComplete)}
-            />
-          </div>
-        </LanguageProvider>
-      </>
+      <LanguageProvider language={language || 'en'}>
+        <div className="text-brand-text min-h-screen animate-fade-in">
+          <OnboardingModal
+            isOpen={true}
+            onComplete={handleOnboardingComplete}
+            onImportData={(file) => handleImportData(file, handleOnboardingComplete)}
+          />
+        </div>
+      </LanguageProvider>
     );
   }
 
   return (
-    <>
-      {isDebugMode && <DebugOverlay />}
-      <LanguageProvider language={language || 'en'}>
-          <div className="text-brand-text min-h-screen animate-fade-in">
-          <audio ref={soundAudioRef} preload="auto" />
-          {showConfetti && <Confetti count={50} theme={theme} />}
+    <LanguageProvider language={language || 'en'}>
+        <div className="text-brand-text min-h-screen animate-fade-in">
+        <audio ref={soundAudioRef} preload="auto" />
+        {showConfetti && <Confetti count={50} theme={theme} />}
 
-          <AppUI
-              user={user}
-              onLogout={logout}
-              onImportData={handleImportData}
-              podcasts={podcasts}
-              collections={collections}
-              title={title}
-              setTitle={(newTitle: string) => updateUserData({ title: newTitle })}
-              streakData={streakData}
-              isTodayComplete={isTodayComplete}
-              currentPodcastId={currentPodcastId}
-              isPlaying={isPlaying}
-              isPlayerExpanded={isPlayerExpanded}
-              setIsPlaying={setIsPlaying}
-              setIsPlayerExpanded={setIsPlayerExpanded}
-              updatePodcastProgress={updatePodcastProgress}
-              handlePlaybackEnd={handlePlaybackEnd}
-              customArtwork={customArtwork}
-              playbackRate={playbackRate}
-              setPlaybackRate={setPlaybackRate}
-              activePlayerTime={activePlayerTime}
-              setActivePlayerTime={setActivePlayerTime}
-              isSettingsOpen={isSettingsOpen}
-              setIsSettingsOpen={setIsSettingsOpen}
-              hideCompleted={hideCompleted}
-              setHideCompleted={(value: boolean) => updateUserData({ hideCompleted: value })}
-              reviewModeEnabled={reviewModeEnabled}
-              setReviewModeEnabled={(value: boolean) => updateUserData({ reviewModeEnabled: value })}
-              completionSound={completionSound}
-              setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
-              useCollectionsView={useCollectionsView}
-              setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
-              playOnNavigate={playOnNavigate}
-              setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
-              playerLayout={playerLayout}
-              setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-              lastPlayedCollectionId={lastPlayedCollectionId}
-              setLastPlayedCollectionId={(id: string | null) => updateUserData({ lastPlayedCollectionId: id })}
-              handleSetCustomArtwork={handleSetCustomArtwork}
-              dataToExport={data}
-              theme={theme}
-              setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
-              setLanguage={(lang: Language) => updateUserData({ language: lang })}
-              setStreakData={handleSetStreakData}
-              setPodcasts={(newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts })}
-              setCollections={(newCollections: Collection[]) => updateUserData({ collections: newCollections })}
-              unrecordCompletion={unrecordCompletion}
-              recordCompletion={recordCompletion}
-              allPodcastsSorted={allPodcastsSorted}
-              podcastsInCurrentView={podcastsInCurrentView}
-              reviewPrompt={reviewPrompt}
-              setReviewPrompt={setReviewPrompt}
-              setNextPodcastOnEnd={setNextPodcastOnEnd}
-              startPlayback={startPlayback}
-              isCategorizeModalOpen={isCategorizeModalOpen}
-              setIsCategorizeModalOpen={setIsCategorizeModalOpen}
-              podcastsToCategorize={podcastsToCategorize}
-              setPodcastsToCategorize={setPodcastsToCategorize}
-              isCreateCollectionModalOpen={isCreateCollectionModalOpen}
-              setIsCreateCollectionModalOpen={setIsCreateCollectionModalOpen}
-              currentView={currentView}
-              setCurrentView={setCurrentView}
-              isClearDataModalOpen={isClearDataModalOpen}
-              setIsClearDataModalOpen={setIsClearDataModalOpen}
-              isLoading={isLoading}
-              onFileUpload={handleFileUpload}
-              // Fix: Corrected prop names to pass the correct handler functions to the AppUI component.
-              onDeletePodcast={handleDeletePodcast}
-              onDeleteCollection={handleDeleteCollection}
-              onResetProgress={handleResetProgress}
-              onClearLocalFiles={handleClearLocalFiles}
-              onResetPreloaded={handleResetPreloaded}
-              onClearAll={handleClearAll}
-              onUpdatePreloadedData={handleUpdatePreloadedData}
-              totalStorageUsed={totalStorageUsed}
-          />
-          
-          {currentPodcast && (
-              <Player
-              key={currentPodcast.id}
-              podcast={currentPodcast}
-              isPlaying={isPlaying}
-              setIsPlaying={setIsPlaying}
-              onProgressSave={updatePodcastProgress}
-              onEnded={handlePlaybackEnd}
-              isPlayerExpanded={isPlayerExpanded}
-              setIsPlayerExpanded={setIsPlayerExpanded}
-              artworkUrl={customArtwork}
-              playbackRate={playbackRate}
-              onPlaybackRateChange={setPlaybackRate}
-              currentTime={activePlayerTime}
-              onCurrentTimeUpdate={setActivePlayerTime}
-              onDurationFetch={updatePodcastDuration}
-              userId={user.uid}
-              layoutMode={playerLayout}
-              setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-              showPlaybackSpeedControl={showPlaybackSpeedControl}
-              setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
-              />
-          )}
-          </div>
-      </LanguageProvider>
-    </>
+        <AppUI
+            user={user}
+            onLogout={logout}
+            onImportData={handleImportData}
+            podcasts={podcasts}
+            collections={collections}
+            title={title}
+            setTitle={(newTitle: string) => updateUserData({ title: newTitle })}
+            streakData={streakData}
+            isTodayComplete={isTodayComplete}
+            currentPodcastId={currentPodcastId}
+            isPlaying={isPlaying}
+            isPlayerExpanded={isPlayerExpanded}
+            setIsPlaying={setIsPlaying}
+            setIsPlayerExpanded={setIsPlayerExpanded}
+            updatePodcastProgress={updatePodcastProgress}
+            handlePlaybackEnd={handlePlaybackEnd}
+            customArtwork={customArtwork}
+            playbackRate={playbackRate}
+            setPlaybackRate={setPlaybackRate}
+            activePlayerTime={activePlayerTime}
+            setActivePlayerTime={setActivePlayerTime}
+            isSettingsOpen={isSettingsOpen}
+            setIsSettingsOpen={setIsSettingsOpen}
+            hideCompleted={hideCompleted}
+            setHideCompleted={(value: boolean) => updateUserData({ hideCompleted: value })}
+            reviewModeEnabled={reviewModeEnabled}
+            setReviewModeEnabled={(value: boolean) => updateUserData({ reviewModeEnabled: value })}
+            completionSound={completionSound}
+            setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
+            useCollectionsView={useCollectionsView}
+            setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
+            playOnNavigate={playOnNavigate}
+            setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
+            playerLayout={playerLayout}
+            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+            lastPlayedCollectionId={lastPlayedCollectionId}
+            setLastPlayedCollectionId={(id: string | null) => updateUserData({ lastPlayedCollectionId: id })}
+            handleSetCustomArtwork={handleSetCustomArtwork}
+            dataToExport={data}
+            theme={theme}
+            setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
+            setLanguage={(lang: Language) => updateUserData({ language: lang })}
+            setStreakData={handleSetStreakData}
+            setPodcasts={(newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts })}
+            setCollections={(newCollections: Collection[]) => updateUserData({ collections: newCollections })}
+            unrecordCompletion={unrecordCompletion}
+            recordCompletion={recordCompletion}
+            allPodcastsSorted={allPodcastsSorted}
+            podcastsInCurrentView={podcastsInCurrentView}
+            reviewPrompt={reviewPrompt}
+            setReviewPrompt={setReviewPrompt}
+            setNextPodcastOnEnd={setNextPodcastOnEnd}
+            startPlayback={startPlayback}
+            isCategorizeModalOpen={isCategorizeModalOpen}
+            setIsCategorizeModalOpen={setIsCategorizeModalOpen}
+            podcastsToCategorize={podcastsToCategorize}
+            setPodcastsToCategorize={setPodcastsToCategorize}
+            isCreateCollectionModalOpen={isCreateCollectionModalOpen}
+            setIsCreateCollectionModalOpen={setIsCreateCollectionModalOpen}
+            currentView={currentView}
+            setCurrentView={setCurrentView}
+            isClearDataModalOpen={isClearDataModalOpen}
+            setIsClearDataModalOpen={setIsClearDataModalOpen}
+            isLoading={isLoading}
+            onFileUpload={handleFileUpload}
+            onDeletePodcast={handleDeletePodcast}
+            onDeleteCollection={handleDeleteCollection}
+            onResetProgress={handleResetProgress}
+            onClearLocalFiles={handleClearLocalFiles}
+            onResetPreloaded={handleResetPreloaded}
+            onClearAll={handleClearAll}
+            onUpdatePreloadedData={handleUpdatePreloadedData}
+            totalStorageUsed={totalStorageUsed}
+        />
+        
+        {currentPodcast && (
+            <Player
+            key={currentPodcast.id}
+            podcast={currentPodcast}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            onProgressSave={updatePodcastProgress}
+            onEnded={handlePlaybackEnd}
+            isPlayerExpanded={isPlayerExpanded}
+            setIsPlayerExpanded={setIsPlayerExpanded}
+            artworkUrl={customArtwork}
+            playbackRate={playbackRate}
+            onPlaybackRateChange={setPlaybackRate}
+            currentTime={activePlayerTime}
+            onCurrentTimeUpdate={setActivePlayerTime}
+            onDurationFetch={updatePodcastDuration}
+            userId={user.uid}
+            layoutMode={playerLayout}
+            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+            showPlaybackSpeedControl={showPlaybackSpeedControl}
+            setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
+            />
+        )}
+        </div>
+    </LanguageProvider>
   );
 }
 
