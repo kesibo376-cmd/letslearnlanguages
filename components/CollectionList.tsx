@@ -103,4 +103,3 @@ const CollectionList: React.FC<CollectionListProps> = (props) => {
   );
 };
 export default CollectionList;
-//comment

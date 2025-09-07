@@ -132,7 +132,7 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
           aria-hidden="true"
         >
           <div 
-            className="flex items-center justify-between w-full h-14 px-3 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 shadow-lg"
+            className="flex items-center justify-between w-full h-14 px-3 bg-brand-surface/70 backdrop-blur-md rounded-lg border border-brand-primary/50 shadow-lg"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-brand-surface">
@@ -143,8 +143,8 @@ const CollectionItem: React.FC<CollectionItemProps> = ({
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-white text-sm font-bold truncate">{isUncategorized ? t('collection.uncategorized') : collection.name}</p>
-                <p className="text-white/70 text-xs">{collection.podcastCount} {collection.podcastCount !== 1 ? t('collection.items') : t('collection.item')}</p>
+                <p className="text-brand-text text-sm font-bold truncate">{isUncategorized ? t('collection.uncategorized') : collection.name}</p>
+                <p className="text-brand-text/70 text-xs">{collection.podcastCount} {collection.podcastCount !== 1 ? t('collection.items') : t('collection.item')}</p>
               </div>
             </div>
             

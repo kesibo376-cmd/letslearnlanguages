@@ -42,4 +42,3 @@ const DebugOverlay: React.FC = () => {
 };
 
 export default DebugOverlay;
-// comment
