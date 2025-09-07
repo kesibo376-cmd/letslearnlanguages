@@ -488,7 +488,7 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                                   {currentMobileCategory?.label}
                               </h3>
                           </div>
-                          <div className="flex-grow overflow-y-auto pr-2 -mr-2">
+                          <div className="flex-grow overflow-y-auto pr-2 -mr-2 min-h-0">
                               {renderContent(mobileView)}
                           </div>
                       </div>
