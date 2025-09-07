@@ -86,4 +86,10 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
     url: `https://cheery-mooncake-49edfd.netlify.app/zh-v/mandarin%20chinese%20v%20-%20unit%20${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'Chinese V',
   })),
+
+  // Spanish I (30 files)
+    ...Array.from({ length: 30 }, (_, i) => ({
+        url: `https://dynamic-manatee-2d9de3.netlify.app/spanish-i/pimsleur%20-%20spanish%20i%20-%20lesson%20${String(i + 1).padStart(2, '0')}.mp3`,
+        collectionName: 'Spanish I',
+    })),
 ];
