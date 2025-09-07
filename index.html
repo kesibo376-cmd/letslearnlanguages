@@ -102,20 +102,23 @@
         --brand-gradient-start: rgba(0, 122, 255, 0.1);
         --brand-gradient-end: #f9f9fb;
       }
-      
-      [data-theme="hand-drawn"] {
-        --font-sans: 'Caveat', cursive;
-        --brand-bg: #fdfaf4;
-        --brand-surface: #ffffff;
-        --brand-surface-light: #f7f2e9;
-        --brand-primary: #0057b8; /* Blue Ink */
-        --brand-primary-hover: #004c9f;
-        --brand-text: #3a3a3a;
-        --brand-text-secondary: #707070;
-        --brand-text-on-primary: #ffffff;
-        --brand-border-color: #3a3a3a;
-        --brand-gradient-start: rgba(0, 87, 184, 0.1);
-        --brand-gradient-end: #fdfaf4;
+
+      [data-theme="cyber-brutalist"] {
+        --font-sans: 'Courier New', monospace;
+        --brand-bg: #000000;
+        --brand-surface: #0a0a0a;
+        --brand-surface-light: #1a1a1a;
+        --brand-primary: #00FF00; /* Lime Green */
+        --brand-primary-hover: #55FF55;
+        --brand-text: #00FF00;
+        --brand-text-secondary: #009900;
+        --brand-text-on-primary: #000000;
+        --brand-border-color: #00FF00;
+        --brand-gradient-start: #00FF001A;
+        --brand-gradient-end: #000000;
+        cursor: crosshair;
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAABdJREFUGFdjZEAF/P8/AwmIAQDw4wQG/R2yvgAAAABJRU5ErkJggg==');
+        background-repeat: repeat;
       }
       
       /* Specific overrides for the Minimal theme */
@@ -154,35 +157,52 @@
         transform: translateY(0);
       }
       
-      /* Specific overrides for Hand-drawn Theme */
-      [data-theme="hand-drawn"] body {
-          font-size: 18px;
+      /* Specific overrides for Cyber Brutalist Theme */
+      [data-theme="cyber-brutalist"] .rounded-lg,
+      [data-theme="cyber-brutalist"] .rounded-md,
+      [data-theme="cyber-brutalist"] .rounded-full {
+        border-radius: 0 !important;
       }
-      [data-theme="hand-drawn"] h1, [data-theme="hand-drawn"] h2, [data-theme="hand-drawn"] h3, [data-theme="hand-drawn"] input, [data-theme="hand-drawn"] button span {
-          font-weight: 700;
-          letter-spacing: 0.5px;
+      [data-theme="cyber-brutalist"] .b-border {
+        border: 1px solid var(--brand-border-color);
       }
-       [data-theme="hand-drawn"] .rounded-lg { border-radius: 8px 12px 7px 10px; }
-       [data-theme="hand-drawn"] .rounded-md { border-radius: 5px 8px 6px 7px; }
-       [data-theme="hand-drawn"] .rounded-full { border-radius: 45% 55% 40% 60% / 60% 40% 55% 45%; }
-       [data-theme="hand-drawn"] .b-border { border: 2px solid var(--brand-border-color); }
-       [data-theme="hand-drawn"] .b-shadow { box-shadow: 3px 3px 0px 0px rgba(58,58,58,0.2); }
-       [data-theme="hand-drawn"] .b-shadow-hover:hover {
-          transform: translateY(-2px) rotate(-0.5deg);
-          box-shadow: 5px 5px 0px 0px rgba(58,58,58,0.2);
-        }
-       [data-theme="hand-drawn"] button.b-shadow-hover:active {
-          transform: translateY(1px) rotate(0.2deg);
-          box-shadow: 2px 2px 0px 0px rgba(58,58,58,0.2);
-        }
-       [data-theme="hand-drawn"] .redo-icon {
-          transform: rotate(5deg);
-        }
-       [data-theme="hand-drawn"] button.active {
-          transform: translateY(1px) rotate(0.2deg);
-          box-shadow: 2px 2px 0px 0px rgba(58,58,58,0.2);
-          background-color: var(--brand-surface-light);
-        }
+      [data-theme="cyber-brutalist"] .b-shadow,
+      [data-theme="cyber-brutalist"] .shadow-lg,
+      [data-theme="cyber-brutalist"] .shadow-2xl,
+      [data-theme="cyber-brutalist"] .b-shadow-hover:hover {
+        box-shadow: none !important;
+      }
+      [data-theme="cyber-brutalist"] .b-shadow-hover:hover,
+      [data-theme="cyber-brutalist"] button.b-shadow-hover:active {
+        transform: none;
+      }
+      [data-theme="cyber-brutalist"] button {
+        transition: background-color 0.1s linear, color 0.1s linear;
+      }
+      [data-theme="cyber-brutalist"] button:hover {
+        background-color: var(--brand-primary) !important;
+        color: var(--brand-text-on-primary) !important;
+      }
+      [data-theme="cyber-brutalist"] button:hover * {
+        color: var(--brand-text-on-primary) !important;
+        fill: var(--brand-text-on-primary) !important;
+        stroke: var(--brand-text-on-primary) !important;
+      }
+      [data-theme="cyber-brutalist"] header button.group:hover {
+        background-color: var(--brand-surface-light) !important;
+      }
+      [data-theme="cyber-brutalist"] header button.group:hover * {
+        color: var(--brand-primary) !important;
+        stroke: var(--brand-primary) !important;
+      }
+      [data-theme="cyber-brutalist"] button.active,
+      [data-theme="cyber-brutalist"] button:active {
+        background-color: var(--brand-primary-hover) !important;
+        color: var(--brand-text-on-primary) !important;
+        transform: none;
+        box-shadow: none !important;
+        border-style: solid;
+      }
 
       /* Minecraft Theme Overrides */
       [data-theme="minecraft"] body { 
@@ -362,7 +382,10 @@
       [data-theme="brutalist"] .rounded-full,
       [data-theme="retro-web"] .rounded-lg,
       [data-theme="retro-web"] .rounded-md,
-      [data-theme="retro-web"] .rounded-full {
+      [data-theme="retro-web"] .rounded-full,
+      [data-theme="cyber-brutalist"] .rounded-lg,
+      [data-theme="cyber-brutalist"] .rounded-md,
+      [data-theme="cyber-brutalist"] .rounded-full {
         border-radius: 0 !important;
       }
       
@@ -515,21 +538,20 @@
           stroke: #ff9500;
       }
       
-      [data-theme="hand-drawn"] .streak-fire-icon {
-          filter: url(#wavy-filter);
-          transform: rotate(-2deg);
-      }
-      [data-theme="hand-drawn"] .streak-fire-icon.filled {
-          fill: #ff7043; /* A nice, ink-like orange */
-          stroke: var(--brand-border-color);
-      }
-      
       [data-theme="brutalist"] .streak-fire-icon {
         stroke-width: 3px;
       }
       [data-theme="brutalist"] .streak-fire-icon.filled {
           fill: #FF5722;
           stroke: var(--brand-border-color);
+      }
+      
+      [data-theme="cyber-brutalist"] .streak-fire-icon {
+        stroke-width: 1px;
+      }
+      [data-theme="cyber-brutalist"] .streak-fire-icon.filled {
+          fill: var(--brand-primary);
+          stroke: none;
       }
       
       [data-theme="minecraft"] .streak-fire-icon {
