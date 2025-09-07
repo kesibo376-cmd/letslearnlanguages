@@ -289,6 +289,12 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
             <ToggleSwitch isOn={useCollectionsView} handleToggle={() => onSetUseCollectionsView(!useCollectionsView)} />
         </div>
       </div>
+       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
+        <div><p className="font-semibold">{t('settings.features.circularPlayer')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.circularPlayerSub')}</p></div>
+        <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>
+            <ToggleSwitch isOn={playerLayout === 'pimsleur'} handleToggle={() => onSetPlayerLayout(playerLayout === 'pimsleur' ? 'default' : 'pimsleur')} />
+        </div>
+      </div>
       <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
         <div><p className="font-semibold">{t('settings.features.streak')}</p><p className="text-sm text-brand-text-secondary">{t('settings.features.streakSub')}</p></div>
         <div className={currentTheme === 'brutalist' ? 'p-2 -m-2' : ''}>

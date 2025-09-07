@@ -136,6 +136,8 @@ export const translations = {
       features: {
         collections: 'Organize with Collections',
         collectionsSub: 'Group audio files into folders.',
+        circularPlayer: 'Circular Player View',
+        circularPlayerSub: 'Grid layout with circular player.',
         streak: 'Enable Streak',
         streakSub: 'Track your daily listening activity.',
         streakDifficulty: 'Streak Difficulty',
@@ -313,6 +315,8 @@ export const translations = {
       features: {
         collections: '使用合集整理',
         collectionsSub: '将音频文件分组到文件夹中。',
+        circularPlayer: '圆形播放器视图',
+        circularPlayerSub: '使用带圆形播放器的网格布局。',
         streak: '启用连续打卡',
         streakSub: '跟踪您的每日收听活动。',
         streakDifficulty: '打卡难度',

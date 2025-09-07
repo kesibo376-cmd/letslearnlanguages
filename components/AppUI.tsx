@@ -16,8 +16,6 @@ import ClearDataModal from './ClearDataModal';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
 import PlayCircleIcon from './icons/PlayCircleIcon';
 import PlusIcon from './icons/PlusIcon';
-import GridIcon from './icons/GridIcon';
-import ListIcon from './icons/ListIcon';
 
 // Define the props for AppUI
 interface AppUIProps {
@@ -412,26 +410,7 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                           </div>
                           <h2 className="flex-shrink text-xl font-bold text-brand-text text-center truncate">{currentCollectionName || t('main.allAudio')}</h2>
                           <div className="flex-1 flex justify-end">
-                            {useCollectionsView && currentView && (
-                                <div className="flex items-center bg-brand-surface-light rounded-md p-1 b-border">
-                                    <button
-                                        onClick={() => setPlayerLayout('pimsleur')}
-                                        className={`p-1.5 sm:p-2 rounded transition-colors ${playerLayout === 'pimsleur' ? 'active bg-brand-surface' : 'hover:bg-brand-surface'}`}
-                                        aria-label="Grid View"
-                                        title="Grid View"
-                                    >
-                                        <GridIcon size={20} className="text-brand-text" />
-                                    </button>
-                                    <button
-                                        onClick={() => setPlayerLayout('default')}
-                                        className={`p-1.5 sm:p-2 rounded transition-colors ${playerLayout === 'default' ? 'active bg-brand-surface' : 'hover:bg-brand-surface'}`}
-                                        aria-label="List View"
-                                        title="List View"
-                                    >
-                                        <ListIcon size={20} className="text-brand-text" />
-                                    </button>
-                                </div>
-                            )}
+                            {/* The view mode toggle was here and has been removed. */}
                           </div>
                       </div>
 
