@@ -68,7 +68,6 @@ const Player: React.FC<PlayerProps> = ({
     const errorMessage = error?.message || 'Unknown error';
     log(`[Player Error] Failed to load: ${podcast.name}. Code: ${errorCode}. Message: ${errorMessage}`);
     
-    // Fix: The standard Error object does not have a 'code' property. Check if the property exists before accessing it.
     alert(`Error: Could not load audio for "${podcast.name}". Code: ${errorCode}. Message: ${errorMessage}. Check console for more details.`);
     setIsLoading(false);
     setIsPlaying(false);
@@ -125,64 +124,48 @@ const Player: React.FC<PlayerProps> = ({
     };
   }, [podcast.id, podcast.storage, podcast.url, reloadKey, handleAudioError, log]);
 
-  // Effect 2: Sync state with the audio element for external changes (e.g., track ending)
+  // Effect 2: The single source of truth for commanding the audio element.
+  // It syncs the audio element's state to the app's `isPlaying` and `playbackRate` state.
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    // Guard against running before the audio element is ready or while it's loading a new source.
+    if (!audio || isLoading) return;
 
-    log(`[Player Sync] isPlaying: ${isPlaying}, audio.paused: ${audio.paused}, playbackRate: ${playbackRate}`);
+    log(`[Player Sync] Syncing playback state. isPlaying: ${isPlaying}, audio.paused: ${audio.paused}`);
     
     audio.playbackRate = playbackRate;
 
-    if (isPlaying && audio.paused) {
-      log('[Player Sync] State is playing but audio is paused. Calling play().');
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          if (error.name === 'NotAllowedError') {
-            log("[Player Sync] Autoplay was prevented by browser. This is common on mobile. Reverting isPlaying state.");
-            setIsPlaying(false);
-          } else {
-            log(`[Player Sync] Error during play(): ${error.name} - ${error.message}`);
-          }
-        });
-      }
-    } else if (!isPlaying && !audio.paused) {
-      log('[Player Sync] State is not playing but audio is running. Calling pause().');
-      audio.pause();
+    if (isPlaying) {
+        if (audio.paused) {
+            log('[Player Sync] State is playing but audio is paused. Calling play().');
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    if (error.name === 'NotAllowedError') {
+                        log("[Player Sync] Autoplay was prevented by browser. Reverting isPlaying state.");
+                        setIsPlaying(false);
+                    } else {
+                        log(`[Player Sync] Error during play(): ${error.name} - ${error.message}`);
+                    }
+                });
+            }
+        }
+    } else {
+        if (!audio.paused) {
+            log('[Player Sync] State is not playing but audio is running. Calling pause().');
+            audio.pause();
+        }
     }
-  }, [isPlaying, playbackRate, setIsPlaying, log]);
+  }, [isPlaying, playbackRate, isLoading, setIsPlaying, log]);
 
 
   // --- UI Event Handlers ---
   const handleTogglePlayPause = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
     e?.stopPropagation();
-    const audio = audioRef.current;
-    if (!audio) {
-        log('[Player Action Error] handleTogglePlayPause called, but audioRef is null.');
-        return;
-    }
-
-    log('[Player Action] handleTogglePlayPause called.');
-
-    const newIsPlayingState = !isPlaying;
-    setIsPlaying(newIsPlayingState);
-
-    if (newIsPlayingState) {
-      log('[Player Action] Attempting to play audio.');
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          log(`[Player Action] Playback prevented by browser. Error: ${error.name} - ${error.message}`);
-          setIsPlaying(false); // Revert state if it fails
-        });
-      }
-    } else {
-      log('[Player Action] Pausing audio.');
-      audio.pause();
-    }
-  }, [isPlaying, setIsPlaying, log]);
-
+    log('[Player Action] handleTogglePlayPause called. Toggling isPlaying state.');
+    // This handler's only job is to update the state. The useEffect hook will handle the side effect.
+    setIsPlaying(p => !p);
+  }, [setIsPlaying, log]);
 
   const handleTouchEndTogglePlayPause = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
