@@ -1,9 +1,12 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useAuth } from './hooks/useAuth';
 import { useUserData, getDefaultData } from './hooks/useUserData';
+// Fix: Import the useStreak hook to resolve the 'Cannot find name' error.
+import { useStreak } from './hooks/useStreak';
 import { v4 as uuidv4 } from 'uuid';
 import * as db from './lib/db';
 import { db as firestore } from './firebase';
@@ -64,120 +67,12 @@ export default function App() {
   } = useUserData(user?.uid);
 
   const [globalTheme, setGlobalTheme] = useTheme();
-  const fetchingDurationsRef = useRef(new Set());
 
   useEffect(() => {
     if (theme) {
       setGlobalTheme(theme);
     }
   }, [theme, setGlobalTheme]);
-
-  // Effect to proactively fetch durations for preloaded podcasts
-  useEffect(() => {
-    if (isDataLoading || !user) {
-      return;
-    }
-
-    const podcastsToUpdate = podcasts.filter((p: Podcast) =>
-      p.storage === 'preloaded' &&
-      (!p.duration || isNaN(p.duration)) &&
-      !fetchingDurationsRef.current.has(p.id)
-    );
-
-    if (podcastsToUpdate.length === 0) {
-      return;
-    }
-
-    // Mark as fetching to prevent re-runs for the same files
-    podcastsToUpdate.forEach(p => fetchingDurationsRef.current.add(p.id));
-
-    console.log(`[Duration Fetch] Found ${podcastsToUpdate.length} preloaded podcasts with missing durations. Fetching...`);
-
-    const fetchDurationForPodcast = async (podcast: Podcast): Promise<{ id: string; duration: number } | null> => {
-      try {
-        const duration = await new Promise<number>((resolve, reject) => {
-          const audio = document.createElement('audio');
-          audio.preload = 'metadata';
-
-          const cleanup = () => {
-            clearTimeout(timeout);
-            audio.onerror = null;
-            audio.onloadedmetadata = null;
-            audio.src = '';
-            if (audio.parentElement) {
-              audio.parentElement.removeChild(audio);
-            }
-          };
-
-          const timeout = setTimeout(() => {
-            cleanup();
-            reject(new Error(`[Duration Fetch] Timeout for ${podcast.name}`));
-          }, 15000);
-
-          audio.onloadedmetadata = () => {
-            const dur = audio.duration;
-            cleanup();
-            resolve(dur);
-          };
-
-          audio.onerror = () => {
-            cleanup();
-            reject(new Error(`[Duration Fetch] Error for ${podcast.name}`));
-          };
-
-          audio.style.display = 'none';
-          document.body.appendChild(audio);
-          audio.src = podcast.url;
-        });
-
-        return { id: podcast.id, duration };
-      } catch (error) {
-        console.warn(error);
-        return null;
-      }
-    };
-
-    const fetchAllDurations = async () => {
-      const promises = podcastsToUpdate.map(fetchDurationForPodcast);
-      const results = await Promise.allSettled(promises);
-
-      // Unmark from fetching so they can be retried if they failed
-      podcastsToUpdate.forEach(p => fetchingDurationsRef.current.delete(p.id));
-
-      const validResults: { id: string, duration: number }[] = [];
-      results.forEach(result => {
-        if (result.status === 'fulfilled' && result.value) {
-          if (!isNaN(result.value.duration) && result.value.duration > 0) {
-            validResults.push(result.value);
-          }
-        }
-      });
-
-      if (validResults.length > 0) {
-        console.log(`[Duration Fetch] Successfully fetched ${validResults.length} durations.`);
-        try {
-          const docRef = firestore.collection('users').doc(user.uid);
-          const docSnap = await docRef.get();
-          if (docSnap.exists) {
-            const latestData = docSnap.data();
-            const latestPodcasts = latestData.podcasts || [];
-            const updatedPodcasts = latestPodcasts.map((p: Podcast) => {
-              const found = validResults.find(r => r.id === p.id);
-              if (found) {
-                return { ...p, duration: found.duration };
-              }
-              return p;
-            });
-            updateUserData({ podcasts: updatedPodcasts });
-          }
-        } catch (error) {
-          console.error("[Duration Fetch] Error getting latest user data to update durations:", error);
-        }
-      }
-    };
-
-    fetchAllDurations();
-  }, [isDataLoading, user, podcasts, updateUserData]);
 
   const { recordActivity, recordCompletion, unrecordCompletion, isTodayComplete, resetStreakProgress } = useStreak(streakData, updateUserData);
 
@@ -747,9 +642,9 @@ export default function App() {
             setCurrentView={setCurrentView}
             isClearDataModalOpen={isClearDataModalOpen}
             setIsClearDataModalOpen={setIsClearDataModalOpen}
+            // Fix: Pass missing props to the AppUI component to satisfy the AppUIProps interface.
             isLoading={isLoading}
             onFileUpload={handleFileUpload}
-            // Fix: Corrected prop names to pass the correct handler functions to the AppUI component.
             onDeletePodcast={handleDeletePodcast}
             onDeleteCollection={handleDeleteCollection}
             onResetProgress={handleResetProgress}
@@ -762,111 +657,31 @@ export default function App() {
         
         {currentPodcast && (
             <Player
-            key={currentPodcast.id}
-            podcast={currentPodcast}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            onProgressSave={updatePodcastProgress}
-            onEnded={handlePlaybackEnd}
-            isPlayerExpanded={isPlayerExpanded}
-            setIsPlayerExpanded={setIsPlayerExpanded}
-            artworkUrl={customArtwork}
-            playbackRate={playbackRate}
-            onPlaybackRateChange={setPlaybackRate}
-            currentTime={activePlayerTime}
-            onCurrentTimeUpdate={setActivePlayerTime}
-            onDurationFetch={updatePodcastDuration}
-            userId={user.uid}
-            layoutMode={playerLayout}
-            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-            showPlaybackSpeedControl={showPlaybackSpeedControl}
-            setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
+                podcast={currentPodcast}
+                isPlaying={isPlaying}
+                setIsPlaying={setIsPlaying}
+                onProgressSave={updatePodcastProgress}
+                onEnded={handlePlaybackEnd}
+                isPlayerExpanded={isPlayerExpanded}
+                setIsPlayerExpanded={setIsPlayerExpanded}
+                artworkUrl={
+                  (useCollectionsView &&
+                    collections.find(c => c.id === currentPodcast.collectionId)?.artworkUrl
+                  ) || customArtwork
+                }
+                playbackRate={playbackRate}
+                onPlaybackRateChange={setPlaybackRate}
+                currentTime={activePlayerTime}
+                onCurrentTimeUpdate={setActivePlayerTime}
+                userId={user.uid}
+                onDurationFetch={updatePodcastDuration}
+                layoutMode={playerLayout}
+                setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
+                showPlaybackSpeedControl={showPlaybackSpeedControl}
+                setShowPlaybackSpeedControl={(value: boolean) => updateUserData({ showPlaybackSpeedControl: value })}
             />
         )}
-        </div>
+      </div>
     </LanguageProvider>
   );
-}
-
-function useStreak(streakData: StreakData, updateUserData: (data: Partial<any>) => void) {
-  const todayStr = useMemo(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date()), []);
-  
-  const STREAK_GOALS: Record<StreakDifficulty, number> = { easy: 1, normal: 1, hard: 2, extreme: 3 };
-
-  const getTodaysCompletions = useCallback((data: StreakData) => {
-    if (data.completionDate === todayStr) return data.completedToday;
-    return [];
-  }, [todayStr]);
-
-  const updateStreak = useCallback((data: StreakData, forceToday?: boolean) => {
-      const today = new Date();
-      const currentTodayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(today);
-      if (data.lastListenDate === currentTodayStr && !forceToday) return data;
-      
-      const yesterday = new Date(today);
-      yesterday.setDate(today.getDate() - 1);
-      const yesterdayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(yesterday);
-      
-      const isConsecutive = data.lastListenDate === yesterdayStr;
-      const newCurrentStreak = isConsecutive ? data.currentStreak + 1 : 1;
-      
-      const newHistory = new Set(data.history || []);
-      newHistory.add(currentTodayStr);
-
-      return {
-        ...data,
-        lastListenDate: currentTodayStr,
-        currentStreak: newCurrentStreak,
-        history: Array.from(newHistory),
-      };
-  }, []);
-
-  const recordActivity = useCallback(() => {
-    if (streakData.difficulty !== 'easy' || streakData.lastListenDate === todayStr) return;
-    const newStreakData = updateStreak(streakData);
-    updateUserData({ streakData: newStreakData });
-  }, [streakData, todayStr, updateStreak, updateUserData]);
-
-  const recordCompletion = useCallback((podcastId: string) => {
-    if (streakData.difficulty === 'easy') return;
-    const todaysCompletions = getTodaysCompletions(streakData);
-    const newCompletedToday = [...new Set([...todaysCompletions, podcastId])];
-    let updatedData = { ...streakData, completedToday: newCompletedToday, completionDate: todayStr };
-    const goal = STREAK_GOALS[updatedData.difficulty];
-    if (newCompletedToday.length >= goal && updatedData.lastListenDate !== todayStr) {
-      updatedData = updateStreak(updatedData, true);
-    }
-    updateUserData({ streakData: updatedData });
-  }, [streakData, todayStr, getTodaysCompletions, STREAK_GOALS, updateStreak, updateUserData]);
-
-  const unrecordCompletion = useCallback((podcastId: string) => {
-     if (streakData.difficulty === 'easy') return;
-     const newStreakData = {
-       ...streakData,
-       completedToday: getTodaysCompletions(streakData).filter((id: string) => id !== podcastId),
-       completionDate: todayStr,
-     };
-     updateUserData({ streakData: newStreakData });
-  }, [streakData, getTodaysCompletions, todayStr, updateUserData]);
-
-  const isTodayComplete = useMemo(() => {
-    if (!streakData.enabled) return false;
-    if (streakData.difficulty === 'easy') return streakData.lastListenDate === todayStr;
-    const goal = STREAK_GOALS[streakData.difficulty];
-    return getTodaysCompletions(streakData).length >= goal;
-  }, [streakData, todayStr, getTodaysCompletions, STREAK_GOALS]);
-  
-  const resetStreakProgress = useCallback(() => {
-     const newStreakData = {
-        ...streakData,
-        lastListenDate: null,
-        currentStreak: 0,
-        completionDate: null,
-        completedToday: [],
-        history: []
-     };
-     updateUserData({ streakData: newStreakData });
-  }, [streakData, updateUserData]);
-
-  return { recordActivity, recordCompletion, unrecordCompletion, isTodayComplete, resetStreakProgress };
 }
