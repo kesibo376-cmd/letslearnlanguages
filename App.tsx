@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -102,6 +101,8 @@ export default function App() {
   // Fix: Explicitly pass undefined to useRef. While calling it with no arguments is valid, 
   // this is more explicit and avoids potential issues with specific toolchain versions that could cause the reported error.
   const audioSrcRef = useRef<string | undefined>(undefined);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const { log } = useDebug();
   const [isPlaybackLoading, setIsPlaybackLoading] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | undefined>();
@@ -223,15 +224,49 @@ export default function App() {
   const handleTogglePlayPause = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !currentPodcastId) return;
-    if (audio.paused) {
-      const targetTime = activePlayerTime;
-      // On some browsers, after a long pause, the audio element's current time can be reset or become inaccurate.
-      // We'll check for a significant drift (>1s) and resynchronize before playing.
-      if (Math.abs(audio.currentTime - targetTime) > 1) {
-        log(`[Player Sync] Correcting time drift. Browser time: ${audio.currentTime}, App time: ${targetTime}. Seeking before play.`);
-        audio.currentTime = targetTime;
+
+    // Initialize AudioContext on first play command to ensure it's created by user interaction.
+    if (!audioContextRef.current && audio) {
+      try {
+        const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+        // Create a source node from the existing <audio> element.
+        const source = context.createMediaElementSource(audio);
+        source.connect(context.destination);
+        audioContextRef.current = context;
+        audioSourceNodeRef.current = source;
+        log('[AudioContext] Initialized successfully on user gesture.');
+      } catch (e) {
+        log(`[AudioContext Error] Could not create AudioContext: ${e instanceof Error ? e.message : String(e)}`);
+        // If context fails to initialize, we can't perform the fix. The app will fallback to default browser behavior.
       }
-      audio.play().catch(e => log(`[Player Error] Playback error: ${e.message}`));
+    }
+
+    const audioContext = audioContextRef.current;
+
+    if (audio.paused) {
+      const playAudio = () => {
+        const targetTime = activePlayerTime;
+        // Re-sync audio time if it has drifted, which can happen after long pauses.
+        if (Math.abs(audio.currentTime - targetTime) > 1) {
+          log(`[Player Sync] Correcting time drift. Browser time: ${audio.currentTime}, App time: ${targetTime}. Seeking before play.`);
+          audio.currentTime = targetTime;
+        }
+        audio.play().catch(e => log(`[Player Error] Playback error: ${e instanceof Error ? e.message : String(e)}`));
+      };
+
+      // If the AudioContext was suspended by the browser (common for power-saving), resume it first.
+      // This "wakes up" the audio hardware gracefully and prevents the "tap" or "click" sound.
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          log('[AudioContext] Resumed from suspended state.');
+          playAudio();
+        }).catch(e => {
+            log(`[AudioContext Error] Failed to resume: ${e instanceof Error ? e.message : String(e)}`);
+            playAudio(); // Attempt to play anyway.
+        });
+      } else {
+        playAudio();
+      }
     } else {
       audio.pause();
     }
