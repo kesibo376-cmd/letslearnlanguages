@@ -8,19 +8,19 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
 
   // JP Advanced (CD1: 14, CD2: 11, CD3: 12, CD4: 10)
   ...Array.from({ length: 14 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/japanese%20advanced%20cd1-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/Japanese%20Advanced%20CD1-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'JP Advanced',
   })),
   ...Array.from({ length: 11 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/japanese%20advanced%20cd2-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/Japanese%20Advanced%20CD2-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'JP Advanced',
   })),
   ...Array.from({ length: 12 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/japanese%20advanced%20cd3-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/Japanese%20Advanced%20CD3-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'JP Advanced',
   })),
   ...Array.from({ length: 10 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/japanese%20advanced%20cd4-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/adv/Japanese%20Advanced%20CD4-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'JP Advanced',
   })),
   
