@@ -268,6 +268,11 @@ export default function App() {
         const selectedPodcast = podcasts.find(p => p.id === id);
         if (!selectedPodcast) return;
         
+        // Update the last played collection ID when a new podcast is selected
+        if (selectedPodcast.collectionId !== lastPlayedCollectionId) {
+            updateUserData({ lastPlayedCollectionId: selectedPodcast.collectionId ?? null });
+        }
+        
         const previouslyListened = allPodcastsSorted.filter(p => p.isListened && p.id !== id);
         const lastListened = previouslyListened[previouslyListened.length - 1];
 
@@ -277,7 +282,7 @@ export default function App() {
             startLoadingNewTrack(id);
         }
     }
-  }, [currentPodcastId, podcasts, allPodcastsSorted, reviewModeEnabled, handleTogglePlayPause, setReviewPrompt, startLoadingNewTrack]);
+  }, [currentPodcastId, podcasts, allPodcastsSorted, reviewModeEnabled, handleTogglePlayPause, setReviewPrompt, startLoadingNewTrack, lastPlayedCollectionId, updateUserData]);
 
   // Effect to load audio source when currentPodcastId changes
   useEffect(() => {
