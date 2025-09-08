@@ -87,6 +87,12 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
     collectionName: 'Chinese V',
   })),
 
+  // Italian I (30 files)
+  ...Array.from({ length: 30 }, (_, i) => ({
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/italian%20i/${i + 1}.mp3`,
+    collectionName: 'Italian I',
+  })),
+  
   // Spanish I (30 files)
     ...Array.from({ length: 30 }, (_, i) => ({
         url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/spanish%20i/${i + 1}.mp3`,
