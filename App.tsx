@@ -845,6 +845,7 @@ export default function App() {
           onPlaying={handlePlaying}
           onError={handleAudioError}
           preload="auto"
+          crossOrigin="anonymous"
         />
         {showConfetti && <Confetti count={50} theme={theme} />}
 
