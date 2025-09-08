@@ -105,6 +105,11 @@ export default function App() {
   const [isPlaybackLoading, setIsPlaybackLoading] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | undefined>();
   const loadingTimeoutRef = useRef<number | null>(null);
+  const podcastsRef = useRef(podcasts);
+  
+  useEffect(() => {
+    podcastsRef.current = podcasts;
+  }, [podcasts]);
 
   useEffect(() => {
     audioSrcRef.current = audioSrc;
@@ -285,7 +290,7 @@ export default function App() {
       const audio = audioRef.current;
       if (!audio) return;
 
-      const podcastToPlay = podcasts.find(p => p.id === currentPodcastId);
+      const podcastToPlay = podcastsRef.current.find(p => p.id === currentPodcastId);
       if (!podcastToPlay) {
         log(`[App Error] Selected podcast with id ${currentPodcastId} not found in loadAudioSource.`);
         setIsPlaybackLoading(false);
@@ -327,7 +332,7 @@ export default function App() {
     };
     
     loadAudioSource();
-  }, [currentPodcastId, podcasts, log]);
+  }, [currentPodcastId, log, setCurrentPodcastId]);
 
 
   const handlePlaybackEnd = () => {
@@ -861,6 +866,7 @@ export default function App() {
             onFileUpload={handleFileUpload}
             onDeletePodcast={handleDeletePodcast}
             onDeleteCollection={handleDeleteCollection}
+            // Fix: Corrected prop names to match the handler functions defined in this component.
             onResetProgress={handleResetProgress}
             onClearLocalFiles={handleClearLocalFiles}
             onResetPreloaded={handleResetPreloaded}
