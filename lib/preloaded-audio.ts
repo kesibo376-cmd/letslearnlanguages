@@ -66,25 +66,25 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
   
   // NL Advanced (CD1: 16, CD2: 16, CD3: 16, CD4: 14)
   ...Array.from({ length: 16 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-adv/dutch%20advanced%20cd1-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-Adv/Dutch%20Advanced%20CD1-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'NL Advanced',
   })),
   ...Array.from({ length: 16 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-adv/dutch%20advanced%20cd2-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-Adv/Dutch%20Advanced%20CD2-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'NL Advanced',
   })),
   ...Array.from({ length: 16 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-adv/dutch%20advanced%20cd3-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-Adv/Dutch%20Advanced%20CD3-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'NL Advanced',
   })),
   ...Array.from({ length: 14 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-adv/dutch%20advanced%20cd4-${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/dutch-Adv/Dutch%20Advanced%20CD4-${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'NL Advanced',
   })),
   
   // Chinese V (30 files)
   ...Array.from({ length: 30 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/zh-v/mandarin%20chinese%20v%20-%20unit%20${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/zh-v/Mandarin%20Chinese%20V%20-%20Unit%20${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'Chinese V',
   })),
 
