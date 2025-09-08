@@ -94,6 +94,7 @@ export default function App() {
   const [isAppReady, setIsAppReady] = useState(false);
   const [isMinLoadTimeMet, setIsMinLoadTimeMet] = useState(false);
   const [isDebugMode, setIsDebugMode] = useState(false);
+  const [lastRandomSound, setLastRandomSound] = useState<string | null>(null);
 
   // --- NEW: Centralized Audio Control ---
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -347,7 +348,16 @@ export default function App() {
       if (completionSound === 'random') {
         const soundKeys = Object.keys(COMPLETION_SOUND_URLS) as (keyof typeof COMPLETION_SOUND_URLS)[];
         if (soundKeys.length > 0) {
-          const randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
+          let randomKey: keyof typeof COMPLETION_SOUND_URLS;
+          // Ensure a different sound plays if possible
+          if (soundKeys.length > 1 && lastRandomSound) {
+            const availableSounds = soundKeys.filter(key => key !== lastRandomSound);
+            randomKey = availableSounds[Math.floor(Math.random() * availableSounds.length)];
+          } else {
+            // Pick any sound if it's the first time or only one sound exists
+            randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
+          }
+          setLastRandomSound(randomKey); // Store the key of the sound we just played
           soundUrl = COMPLETION_SOUND_URLS[randomKey];
         }
       } else {
