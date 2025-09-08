@@ -1,7 +1,7 @@
 
 export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] = [
-  // JP Foundation (75 files)
-  ...Array.from({ length: 75 }, (_, i) => ({
+  // JP Foundation (87 files)
+  ...Array.from({ length: 87 }, (_, i) => ({
     url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/${i + 1}.mp3`,
     collectionName: 'JP Foundation',
   })),
