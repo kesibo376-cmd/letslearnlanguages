@@ -1,3 +1,4 @@
+
 export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] = [
   // JP Foundation (75 files)
   ...Array.from({ length: 75 }, (_, i) => ({
@@ -25,7 +26,7 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
   
   // Japanese I (30 files)
   ...Array.from({ length: 30 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/japanese%20i/japanese%20i%20[3rd%20ed]%20-%20lesson%20${String(i + 1).padStart(2, '0')}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/japanese%20i/${i + 1}.mp3`,
     collectionName: 'Japanese I',
   })),
 
