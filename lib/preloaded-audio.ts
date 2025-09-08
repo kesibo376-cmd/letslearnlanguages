@@ -89,7 +89,7 @@ export const PRELOADED_PODCAST_URLS: { url: string; collectionName?: string }[] 
 
   // Italian I (30 files)
   ...Array.from({ length: 30 }, (_, i) => ({
-    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/italian%20i/${i + 1}.mp3`,
+    url: `https://pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev/italian%20i/Pimsleur%20Italian%201%20-%20Unit%20${String(i + 1).padStart(2, '0')}.mp3`,
     collectionName: 'Italian I',
   })),
   
