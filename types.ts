@@ -8,12 +8,6 @@ export interface Podcast {
   storage: 'preloaded' | 'indexeddb';
   collectionId: string | null;
   size?: number; // file size in bytes
-  timestamps?: Timestamp[];
-}
-
-export interface Timestamp {
-  time: number; // in seconds
-  label: string;
 }
 
 export interface Collection {

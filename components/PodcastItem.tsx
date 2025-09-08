@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { Podcast, Collection, LayoutMode, Theme } from '../types';
 import { formatTime, formatBytes } from '../lib/utils';
@@ -8,7 +6,7 @@ import PauseIcon from './icons/PauseIcon';
 import CheckIcon from './icons/CheckIcon';
 import ThreeDotsIcon from './icons/ThreeDotsIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
-import BookOpenIcon from './icons/BookOpenIcon';
+import PlayCircleIcon from './icons/PlayCircleIcon';
 import { useTranslation } from '../contexts/LanguageContext';
 
 interface PodcastItemProps {
@@ -57,7 +55,6 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
   const progressToShow = progressOverride !== undefined ? progressOverride : podcast.progress;
   const progressPercent = isCompleted ? 100 : podcast.duration > 0 ? (progressToShow / podcast.duration) * 100 : 0;
   
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -122,170 +119,73 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
           
           <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity">
              <div className="w-12 h-12 bg-brand-primary/50 rounded-full flex items-center justify-center text-brand-text-on-primary b-border">
-                <PlayIcon size={32} />
-            </div>
+                {isCompleted ? <CheckIcon size={24} /> : isInProgress ? <PlayCircleIcon size={32}/> : <span className="text-xl font-bold text-shadow-md">{lessonName}</span>}
+             </div>
           </div>
-          
-          <button className="absolute top-2 right-2 flex items-center gap-1.5 bg-brand-primary text-brand-text-on-primary text-xs font-bold px-3 py-1.5 rounded-full hover:bg-brand-primary-hover transition b-border">
-             <BookOpenIcon size={14} />
-             <span>&raquo;</span>
-          </button>
-        </div>
-        
-        <div className="p-3 bg-brand-surface text-brand-text rounded-b-lg">
-          <div className="flex justify-between items-start">
-            <div className="flex-grow min-w-0">
-                <h3 className="font-bold text-sm truncate" title={lessonName}>{lessonName}</h3>
-                {isInProgress && (
-                  <span className="text-xs text-brand-text-secondary bg-brand-surface-light border border-brand-border-color mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full">
-                    <PlayIcon size={10} /> {t('podcast.inProgress')}
-                  </span>
-                )}
-            </div>
-            
-            <div className="relative flex-shrink-0 -mr-1 -mt-1" ref={menuRef}>
-              <button onClick={handleMenuToggle} className="p-2 rounded-full hover:bg-brand-surface-light text-brand-text-secondary hover:text-brand-text">
-                <ThreeDotsIcon size={20} />
-              </button>
-              {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-48 bg-brand-surface-light rounded-md shadow-lg z-50 b-border animate-scale-in origin-top-right">
-                  <ul className="py-1">
-                      <li>
-                          <button onClick={(e) => handleAction(e, () => onToggleComplete(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface">
-                            {isCompleted ? t('podcast.unmarkCompleted') : t('podcast.markCompleted')}
-                          </button>
-                      </li>
-                      <li className="relative">
-                        <button onClick={(e) => { e.stopPropagation(); setIsMoveMenuOpen(prev => !prev); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex justify-between items-center">
-                          {t('podcast.moveTo')} <ChevronRightIcon size={16} className={`${isMoveMenuOpen ? 'rotate-90' : ''} transition-transform`}/>
-                        </button>
-                        {isMoveMenuOpen && (
-                            <div className="absolute right-full top-0 mr-1 w-48 bg-brand-surface-light rounded-md shadow-lg b-border">
-                                <ul className="py-1 max-h-48 overflow-y-auto">
-                                    <li><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, null))} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface disabled:opacity-50" disabled={podcast.collectionId === null}>{t('podcast.uncategorized')}</button></li>
-                                    {collections.map(c => (<li key={c.id}><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, c.id))} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface disabled:opacity-50" disabled={podcast.collectionId === c.id}>{c.name}</button></li>))}
-                                </ul>
-                            </div>
-                        )}
-                      </li>
-                      <li><button onClick={(e) => handleAction(e, () => onDeleteRequest(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10">{t('podcast.delete')}</button></li>
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex justify-around items-center mt-3 opacity-30">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="w-6 h-6 bg-brand-surface-light rounded-full" />
-            ))}
+
+          <div className="absolute bottom-1 left-1 right-1 h-1.5 bg-black/30 rounded-full overflow-hidden">
+            <div className="bg-brand-primary h-full transition-all duration-200" style={{ width: `${progressPercent}%` }}/>
           </div>
         </div>
       </div>
     );
   }
-
+  
   return (
     <div
-      onClick={() => onSelect(podcast.id)}
       onAnimationEnd={onAnimationEnd}
       style={style}
-      className={`p-4 flex items-center gap-4 border-b border-brand-surface cursor-pointer transition-all duration-200 relative transform origin-center
-        ${isActive ? 'bg-brand-surface-light' : 'hover:bg-brand-surface hover:-translate-y-0.5'}
-        ${isCompleted && !isActive ? 'opacity-60' : ''}
-        ${isDeleting ? 'animate-shrink-out' : 'animate-slide-up-fade-in'}
-        ${isMenuOpen ? 'z-50' : ''}
-      `}
+      className={`relative transition-colors duration-200 ${isDeleting ? 'animate-shrink-out' : 'animate-slide-up-fade-in'}`}
     >
-      <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
-        {isCompleted && !isActive ? (
-          <div className="animate-scale-in">
-            <CheckIcon size={24} color="text-brand-primary" />
-          </div>
-        ) : isActive ? (
-          isPlaying ? <PauseIcon size={24} color="text-brand-primary" /> : <PlayIcon size={24} color="text-brand-primary" />
-        ) : (
-           <PlayIcon size={24} color="text-brand-text-secondary" />
-        )}
-      </div>
-      <div className="flex-grow min-w-0">
-        <h3 className={`font-semibold truncate ${isActive ? 'text-brand-primary' : 'text-brand-text'}`}>{podcast.name}</h3>
-        <div className="mt-2 w-full bg-brand-surface rounded-full h-1.5">
-          <div
-            className="bg-brand-primary h-1.5 rounded-full"
-            style={{ width: `${progressPercent}%`, transition: isActive ? 'width 0.2s linear' : 'none' }}
-          ></div>
+        <div className="absolute top-0 left-0 h-full bg-brand-surface-light rounded-lg" style={{ width: `${progressPercent}%` }}/>
+        <div className={`absolute top-0 left-0 h-full bg-brand-primary/20 rounded-lg transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`} style={{ width: '100%' }} />
+      
+        <div className={`relative flex items-center gap-4 p-3 cursor-pointer`} onClick={() => onSelect(podcast.id)}>
+            <div className="flex-shrink-0">
+                <button className={`w-12 h-12 flex items-center justify-center rounded-full transition-all duration-200 b-border ${isActive ? 'bg-brand-primary text-brand-text-on-primary b-shadow' : 'bg-brand-surface text-brand-text'}`} aria-label={isPlaying && isActive ? `Pause ${podcast.name}` : `Play ${podcast.name}`}>
+                    {isPlaying && isActive ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+                </button>
+            </div>
+            
+            <div className="flex-grow min-w-0">
+                <p className={`font-semibold truncate ${isActive ? 'text-brand-primary' : 'text-brand-text'}`}>{podcast.name}</p>
+                <div className="flex items-center gap-2 text-sm text-brand-text-secondary mt-1">
+                    {isCompleted ? <><CheckIcon size={16} className="text-brand-primary" /><span>{t('podcast.completed')}</span></> : <span>{formatTime(progressToShow)} / {formatTime(podcast.duration || 0)}</span>}
+                    {podcast.size ? <span>· {formatBytes(podcast.size)}</span> : null}
+                </div>
+            </div>
+
+            <div className="flex-shrink-0 relative" ref={menuRef}>
+                 <button onClick={handleMenuToggle} className="p-2 rounded-full text-brand-text-secondary hover:text-brand-text hover:bg-brand-surface-light transition-colors" aria-label={`Actions for ${podcast.name}`}>
+                    <ThreeDotsIcon size={20} />
+                </button>
+                {isMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-brand-surface-light rounded-md shadow-lg z-10 b-border animate-scale-in origin-top-right">
+                        <ul className="py-1">
+                            <li><button onClick={(e) => handleAction(e, () => onToggleComplete(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center gap-3"><CheckIcon size={16}/> {isCompleted ? t('podcast.unmarkCompleted') : t('podcast.markCompleted')}</button></li>
+                            <li className="relative">
+                                <button onClick={(e) => { e.stopPropagation(); setIsMoveMenuOpen(p => !p); }} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex items-center justify-between gap-3">
+                                    <span>{t('podcast.moveTo')}</span>
+                                    <ChevronRightIcon size={16} />
+                                </button>
+                                {isMoveMenuOpen && (
+                                    <div className="absolute right-full top-0 mr-1 w-56 bg-brand-surface-light rounded-md shadow-lg z-20 b-border animate-scale-in origin-right">
+                                        <ul className="py-1 max-h-48 overflow-y-auto">
+                                            <li><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, null))} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface">{t('podcast.uncategorized')}</button></li>
+                                            {collections.map(c => (
+                                                <li key={c.id}><button onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, c.id))} className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface">{c.name}</button></li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </li>
+                            <div className="my-1 border-t border-brand-surface"></div>
+                            <li><button onClick={(e) => handleAction(e, () => onDeleteRequest(podcast.id))} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-3">{t('podcast.delete')}</button></li>
+                        </ul>
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-      <div className="flex-shrink-0 text-sm text-brand-text-secondary w-20 text-right">
-        <span>{formatTime(podcast.duration)}</span>
-        {typeof podcast.size === 'number' && podcast.storage === 'indexeddb' && (
-           <span className="block text-xs opacity-80">{formatBytes(podcast.size)}</span>
-        )}
-      </div>
-       <div className="flex-shrink-0 relative" ref={menuRef}>
-          <button onClick={handleMenuToggle} className="p-2 rounded-full hover:bg-brand-surface-light text-brand-text-secondary hover:text-brand-text">
-            <ThreeDotsIcon size={20} />
-          </button>
-          {isMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-brand-surface-light rounded-md shadow-lg z-50 b-border animate-scale-in origin-top-right">
-                  <ul className="py-1">
-                      <li>
-                          <button 
-                            onClick={(e) => handleAction(e, () => onToggleComplete(podcast.id))}
-                            className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface"
-                          >
-                            {isCompleted ? t('podcast.unmarkCompleted') : t('podcast.markCompleted')}
-                          </button>
-                      </li>
-                      {useCollectionsView && (
-                        <li className="relative">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setIsMoveMenuOpen(prev => !prev); }}
-                            className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface flex justify-between items-center"
-                          >
-                            {t('podcast.moveTo')} <ChevronRightIcon size={16} className={`${isMoveMenuOpen ? 'rotate-180' : ''} transition-transform`}/>
-                          </button>
-                          {isMoveMenuOpen && (
-                              <div className="absolute right-full top-0 mr-1 w-48 bg-brand-surface-light rounded-md shadow-lg b-border">
-                                  <ul className="py-1 max-h-48 overflow-y-auto">
-                                      <li>
-                                        <button 
-                                          onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, null))} 
-                                          className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface disabled:opacity-50"
-                                          disabled={podcast.collectionId === null}
-                                        >
-                                          {t('podcast.uncategorized')}
-                                        </button>
-                                      </li>
-                                      {collections.map(c => (
-                                          <li key={c.id}>
-                                              <button
-                                                  onClick={(e) => handleAction(e, () => onMoveRequest(podcast.id, c.id))}
-                                                  className="w-full text-left px-4 py-2 text-sm text-brand-text hover:bg-brand-surface disabled:opacity-50"
-                                                  disabled={podcast.collectionId === c.id}
-                                              >
-                                                  {c.name}
-                                              </button>
-                                          </li>
-                                      ))}
-                                  </ul>
-                              </div>
-                          )}
-                        </li>
-                      )}
-                      <li>
-                           <button 
-                            onClick={(e) => handleAction(e, () => onDeleteRequest(podcast.id))}
-                            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-brand-surface"
-                          >
-                            {t('podcast.delete')}
-                          </button>
-                      </li>
-                  </ul>
-              </div>
-          )}
-      </div>
     </div>
   );
 };
