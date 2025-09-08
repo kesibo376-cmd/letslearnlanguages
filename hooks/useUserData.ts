@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, LayoutMode, Language } from '../types';
-import { db } from '../firebase';
+import { db, firebase } from '../firebase';
 import { PRELOADED_PODCAST_URLS } from '../lib/preloaded-audio';
 
 const DEFAULT_STREAK_DATA: StreakData = {
@@ -44,7 +44,7 @@ export const getDefaultData = () => ({
     streakData: DEFAULT_STREAK_DATA,
     hideCompleted: false,
     reviewModeEnabled: false,
-    completionSound: 'random' as CompletionSound,
+    completionSound: 'minecraft' as CompletionSound,
     useCollectionsView: true,
     playOnNavigate: false,
     hasCompletedOnboarding: false,
@@ -67,52 +67,66 @@ export function useUserData(userId?: string) {
             return;
         }
 
-        // FIX: Use v8 compat syntax for document reference
         const docRef = db.collection('users').doc(userId);
+        let unsub: (() => void) | null = null;
 
-        // FIX: Use v8 compat syntax for onSnapshot and check .exists property
-        const unsubscribe = docRef.onSnapshot((docSnap) => {
-            if (docSnap.exists) {
-                setData(docSnap.data());
-            } else {
-                // User document doesn't exist, so this is a new user.
-                // The signup function in AuthContext will create the initial document.
-                console.log("No user data found for UID:", userId);
-                setData(null); // Or some indicator that it's a new user
+        const initialFetch = async () => {
+            try {
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Firestore initial fetch timed out after 10 seconds.')), 10000)
+                );
+                
+                // Race the get() call against the timeout
+                const docSnap = await Promise.race([docRef.get(), timeoutPromise as Promise<firebase.firestore.DocumentSnapshot>]);
+
+                if (docSnap.exists) {
+                    setData(docSnap.data());
+                } else {
+                    console.log("No user data found for UID:", userId);
+                    setData(null);
+                }
+            } catch (error) {
+                console.error("Error or timeout fetching initial user data:", error);
+                // On timeout or error, we proceed with default data.
+                // The snapshot listener will correct it if the network recovers.
+                setData(null);
+            } finally {
+                setIsDataLoading(false);
+                // Now, attach the realtime listener for subsequent updates.
+                unsub = docRef.onSnapshot((doc) => {
+                    if (doc.exists) {
+                        setData(doc.data());
+                    }
+                }, (err) => {
+                    console.error("Firestore snapshot listener error:", err);
+                });
             }
-            setIsDataLoading(false);
-        }, (error) => {
-            console.error("Error fetching user data:", error);
-            setIsDataLoading(false);
-        });
+        };
 
-        return () => unsubscribe(); // Cleanup listener on unmount
+        initialFetch();
+
+        // Cleanup listener on unmount
+        return () => {
+            if (unsub) {
+                unsub();
+            }
+        };
     }, [userId]);
     
     const updateUserData = useCallback(async (updates: Partial<any> | null) => {
         if (!userId) return;
-        // FIX: Use v8 compat syntax for document reference
         const docRef = db.collection('users').doc(userId);
         try {
             if (updates === null) {
-              // A null update means reset the user's data to default
-              // FIX: Use v8 compat syntax for set()
               await docRef.set(getDefaultData());
             } else {
-              // Using updateDoc directly is simpler and more robust for offline scenarios.
-              // It will fail if the document doesn't exist, but that's the correct
-              // behavior for an update. We handle that failure below.
-              // FIX: Use v8 compat syntax for update()
               await docRef.update(updates);
             }
         } catch (error) {
             console.error("Error updating user data:", error);
-            // If update fails because doc doesn't exist (e.g. race condition on signup),
-            // we can try to create it with the merged data as a fallback.
             if (error instanceof Error && 'code' in error && (error as any).code === 'not-found') {
                 console.log("Document not found, creating it with merged data.");
                 try {
-                    // FIX: Use v8 compat syntax for set()
                     await docRef.set({ ...getDefaultData(), ...updates });
                 } catch (e) {
                     console.error("Error creating document after update failed:", e);
