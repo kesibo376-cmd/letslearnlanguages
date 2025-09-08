@@ -13,8 +13,21 @@ const DEFAULT_STREAK_DATA: StreakData = {
   history: [],
 };
 
+// A simple hash function to create a stable ID from the URL.
+const simpleHash = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash |= 0; // Convert to 32bit integer
+    }
+    // Return a string that is a valid ID and unlikely to collide with uuidv4
+    return 'preloaded-' + hash.toString(36) + '-' + str.length;
+};
+
+
 export const getDefaultData = () => ({
-    podcasts: PRELOADED_PODCAST_URLS.map((item, index) => {
+    podcasts: PRELOADED_PODCAST_URLS.map((item) => {
       const urlParts = item.url.split('/');
       const fileName = urlParts[urlParts.length - 1];
       let name = decodeURIComponent(fileName).replace(/\.[^/.]+$/, "");
@@ -25,8 +38,8 @@ export const getDefaultData = () => ({
       }
 
       return {
-        id: `preloaded-${index}`,
-        name: name || `Preloaded Audio ${index + 1}`, // fallback
+        id: simpleHash(item.url),
+        name: name || `Preloaded Audio`, // fallback
         url: item.url,
         duration: 0, // Will be fetched on playback
         progress: 0,
@@ -44,7 +57,7 @@ export const getDefaultData = () => ({
     streakData: DEFAULT_STREAK_DATA,
     hideCompleted: false,
     reviewModeEnabled: false,
-    completionSound: 'minecraft' as CompletionSound,
+    completionSound: 'random' as CompletionSound,
     useCollectionsView: true,
     playOnNavigate: false,
     hasCompletedOnboarding: false,

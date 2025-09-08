@@ -610,54 +610,44 @@ export default function App() {
     setIsLoading(true);
 
     const defaultData = getDefaultData();
-    const defaultPreloadedPodcasts = defaultData.podcasts.filter((p: Podcast) => p.storage === 'preloaded');
-    const defaultPreloadedCollections = defaultData.collections;
-    
-    const existingCollectionIds = new Set(collections.map((c: Collection) => c.id));
-    const missingCollections = defaultPreloadedCollections.filter((c: Collection) => !existingCollectionIds.has(c.id));
+    const newPreloadedPodcasts = defaultData.podcasts.filter((p: Podcast) => p.storage === 'preloaded');
+    const newPreloadedCollections = defaultData.collections;
 
-    // To prevent duplication with legacy data, we identify preloaded podcasts by URL
-    // even if they are missing the `storage` property from their data model.
     const R2_DEV_HOST = 'pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev';
-    const existingPreloadedPodcastUrls = new Set(
-      podcasts
-        .filter((p: Podcast) => 
-            p.storage === 'preloaded' || 
-            (!(p as any).storage && p.url && p.url.includes(R2_DEV_HOST))
-        )
-        .map(p => p.url)
-    );
-    
-    const missingPodcasts = defaultPreloadedPodcasts.filter(p => !existingPreloadedPodcastUrls.has(p.url));
 
-    if (missingCollections.length === 0 && missingPodcasts.length === 0) {
-        alert("Your preloaded content is already up-to-date.");
-        setIsLoading(false);
-        return;
-    }
+    // Preserve progress from existing preloaded podcasts by mapping URL to progress
+    const progressMap = new Map<string, { progress: number; isListened: boolean }>();
+    podcasts
+      .filter((p: Podcast) => p.storage === 'preloaded' || (p.url && p.url.includes(R2_DEV_HOST))) // Also catch legacy preloaded
+      .forEach((p: Podcast) => {
+        progressMap.set(p.url, { progress: p.progress, isListened: p.isListened });
+      });
 
-    // Perform a one-time data migration for any existing podcasts that are missing the `storage` property.
-    const podcastsWithStorageFixed = podcasts.map((p: Podcast) => {
-        if ((p as any).storage) {
-            return p; // Already has storage property, no change needed.
-        }
-        // If storage is missing, determine what it should be.
-        if (p.url && p.url.includes(R2_DEV_HOST)) {
-            return { ...p, storage: 'preloaded' as const };
-        }
-        // Assume anything else is a local file.
-        return { ...p, storage: 'indexeddb' as const };
+    const updatedPreloadedPodcasts = newPreloadedPodcasts.map((p: Podcast) => {
+      if (progressMap.has(p.url)) {
+        const savedProgress = progressMap.get(p.url)!;
+        return { ...p, progress: savedProgress.progress, isListened: savedProgress.isListened };
+      }
+      return p;
     });
 
-    const updatedCollections = [...collections, ...missingCollections];
-    const updatedPodcasts = [...podcastsWithStorageFixed, ...missingPodcasts];
+    // Get user-uploaded podcasts to keep them
+    const userUploadedPodcasts = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
+    
+    // Combine lists: user's files + updated preloaded files
+    const finalPodcasts = [...userUploadedPodcasts, ...updatedPreloadedPodcasts];
+
+    // Update collections: add any new ones, but don't remove existing user-created collections
+    const existingCollectionIds = new Set(collections.map((c: Collection) => c.id));
+    const missingCollections = newPreloadedCollections.filter((c: Collection) => !existingCollectionIds.has(c.id));
+    const finalCollections = [...collections, ...missingCollections];
 
     try {
         await updateUserData({
-            collections: updatedCollections,
-            podcasts: updatedPodcasts
+            collections: finalCollections,
+            podcasts: finalPodcasts
         });
-        alert(`Successfully added ${missingCollections.length} new collection(s) and ${missingPodcasts.length} new audio file(s). Your library is now up to date.`);
+        alert(`Successfully updated preloaded content. Your library is now up to date.`);
     } catch (error) {
         console.error("Failed to update preloaded data:", error);
         alert("An error occurred while updating. Please try again.");
