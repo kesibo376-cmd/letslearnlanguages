@@ -135,7 +135,7 @@ const PodcastItem: React.FC<PodcastItemProps> = ({
     <div
       onAnimationEnd={onAnimationEnd}
       style={style}
-      className={`relative transition-colors duration-200 ${isDeleting ? 'animate-shrink-out' : 'animate-slide-up-fade-in'}`}
+      className={`relative transition-colors duration-200 ${isDeleting ? 'animate-shrink-out' : 'animate-slide-up-fade-in'} ${isMenuOpen ? 'z-10' : ''}`}
     >
         <div className="absolute top-0 left-0 h-full bg-brand-surface-light rounded-lg" style={{ width: `${progressPercent}%` }}/>
         <div className={`absolute top-0 left-0 h-full bg-brand-primary/20 rounded-lg transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`} style={{ width: '100%' }} />
