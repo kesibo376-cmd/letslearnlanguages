@@ -601,9 +601,18 @@ export default function App() {
     const existingCollectionIds = new Set(collections.map((c: Collection) => c.id));
     const missingCollections = defaultPreloadedCollections.filter((c: Collection) => !existingCollectionIds.has(c.id));
 
+    // To prevent duplication with legacy data, we identify preloaded podcasts by URL
+    // even if they are missing the `storage` property from their data model.
+    const R2_DEV_HOST = 'pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev';
     const existingPreloadedPodcastUrls = new Set(
-      podcasts.filter(p => p.storage === 'preloaded').map(p => p.url)
+      podcasts
+        .filter((p: Podcast) => 
+            p.storage === 'preloaded' || 
+            (!(p as any).storage && p.url && p.url.includes(R2_DEV_HOST))
+        )
+        .map(p => p.url)
     );
+    
     const missingPodcasts = defaultPreloadedPodcasts.filter(p => !existingPreloadedPodcastUrls.has(p.url));
 
     if (missingCollections.length === 0 && missingPodcasts.length === 0) {
@@ -612,8 +621,21 @@ export default function App() {
         return;
     }
 
+    // Perform a one-time data migration for any existing podcasts that are missing the `storage` property.
+    const podcastsWithStorageFixed = podcasts.map((p: Podcast) => {
+        if ((p as any).storage) {
+            return p; // Already has storage property, no change needed.
+        }
+        // If storage is missing, determine what it should be.
+        if (p.url && p.url.includes(R2_DEV_HOST)) {
+            return { ...p, storage: 'preloaded' as const };
+        }
+        // Assume anything else is a local file.
+        return { ...p, storage: 'indexeddb' as const };
+    });
+
     const updatedCollections = [...collections, ...missingCollections];
-    const updatedPodcasts = [...podcasts, ...missingPodcasts];
+    const updatedPodcasts = [...podcastsWithStorageFixed, ...missingPodcasts];
 
     try {
         await updateUserData({
