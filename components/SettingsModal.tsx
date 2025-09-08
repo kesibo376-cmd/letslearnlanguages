@@ -82,6 +82,38 @@ const SOUNDS: { id: CompletionSound; name: string }[] = [
   { id: 'random', name: 'Random' },
 ];
 
+const getDuration = (src: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
+        const audio = document.createElement('audio');
+        audio.preload = 'metadata';
+        audio.crossOrigin = "anonymous";
+
+        const cleanup = () => {
+            audio.onloadedmetadata = null;
+            audio.onerror = null;
+            audio.remove();
+        };
+
+        audio.onloadedmetadata = () => {
+            resolve(audio.duration);
+            cleanup();
+        };
+        
+        audio.onerror = () => {
+            console.error(`Error loading metadata for src: ${src}`);
+            const error = audio.error;
+            if (error) {
+                reject(new Error(`Failed to load audio metadata. Code: ${error.code}, Message: ${error.message}`));
+            } else {
+                reject(new Error('Failed to load audio metadata.'));
+            }
+            cleanup();
+        };
+        
+        audio.src = src;
+    });
+};
+
 const SettingsModal: React.FC<SettingsModalProps> = (props) => {
   const {
     isOpen, onClose, onResetProgress, onOpenClearDataModal, currentTheme, onSetTheme, onSetLanguage,
@@ -179,56 +211,52 @@ const SettingsModal: React.FC<SettingsModalProps> = (props) => {
 
         const updatedPodcasts = [...podcasts];
         let successCount = 0;
+        let errorCount = 0;
 
-        const getDuration = (src: string): Promise<number> => {
-            return new Promise((resolve, reject) => {
-                const audio = document.createElement('audio');
-                audio.preload = 'metadata';
-                audio.onloadedmetadata = () => {
-                    URL.revokeObjectURL(audio.src);
-                    resolve(audio.duration);
-                    audio.remove();
-                };
-                audio.onerror = () => {
-                    URL.revokeObjectURL(audio.src);
-                    console.error(`Error loading metadata for src: ${src}`);
-                    reject(new Error('Failed to load audio metadata.'));
-                    audio.remove();
-                };
-                audio.src = src;
-            });
+        const processBatch = async (batch: Podcast[]) => {
+            await Promise.all(batch.map(async (podcast) => {
+                let objectUrl: string | undefined;
+                try {
+                    let duration: number;
+                    if (podcast.storage === 'indexeddb') {
+                        const blob = await db.getAudio(podcast.id);
+                        if (!blob) throw new Error('Audio blob not found in IndexedDB');
+                        objectUrl = URL.createObjectURL(blob);
+                        duration = await getDuration(objectUrl);
+                    } else {
+                        duration = await getDuration(podcast.url);
+                    }
+                    
+                    const index = updatedPodcasts.findIndex(p => p.id === podcast.id);
+                    if (index !== -1 && isFinite(duration) && duration > 0) {
+                        updatedPodcasts[index] = { ...updatedPodcasts[index], duration };
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    console.error(`Failed to fetch duration for "${podcast.name}":`, error);
+                    errorCount++;
+                } finally {
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                }
+            }));
         };
 
-        for (const podcast of podcastsToUpdate) {
-            let objectUrl: string | undefined;
-            try {
-                let audioSrc: string;
-                if (podcast.storage === 'indexeddb') {
-                    const blob = await db.getAudio(podcast.id);
-                    if (!blob) throw new Error('Audio blob not found in IndexedDB');
-                    objectUrl = URL.createObjectURL(blob);
-                    audioSrc = objectUrl;
-                } else {
-                    audioSrc = podcast.url;
-                }
-                
-                const duration = await getDuration(audioSrc);
-
-                const index = updatedPodcasts.findIndex(p => p.id === podcast.id);
-                if (index !== -1 && isFinite(duration) && duration > 0) {
-                    updatedPodcasts[index] = { ...updatedPodcasts[index], duration };
-                    successCount++;
-                }
-            } catch (error) {
-                console.error(`Failed to fetch duration for "${podcast.name}":`, error);
-            } finally {
-                if (objectUrl) URL.revokeObjectURL(objectUrl);
-            }
+        const batchSize = 5;
+        for (let i = 0; i < podcastsToUpdate.length; i += batchSize) {
+            const batch = podcastsToUpdate.slice(i, i + batchSize);
+            await processBatch(batch);
         }
 
         setPodcasts(updatedPodcasts);
         setIsFetchingDurations(false);
-        alert(`Successfully fetched durations for ${successCount} of ${podcastsToUpdate.length} audio files.`);
+        
+        let alertMessage = `Duration fetch complete.\nSuccessfully updated: ${successCount}\nFailed: ${errorCount}`;
+        if (errorCount > 0) {
+            alertMessage += "\n\nSome files failed. This may be due to network issues or server restrictions (CORS). Please check the browser console for details.";
+        }
+        alert(alertMessage);
     };
 
   const renderContent = () => {
