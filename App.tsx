@@ -224,11 +224,18 @@ export default function App() {
     const audio = audioRef.current;
     if (!audio || !currentPodcastId) return;
     if (audio.paused) {
+      const targetTime = activePlayerTime;
+      // On some browsers, after a long pause, the audio element's current time can be reset or become inaccurate.
+      // We'll check for a significant drift (>1s) and resynchronize before playing.
+      if (Math.abs(audio.currentTime - targetTime) > 1) {
+        log(`[Player Sync] Correcting time drift. Browser time: ${audio.currentTime}, App time: ${targetTime}. Seeking before play.`);
+        audio.currentTime = targetTime;
+      }
       audio.play().catch(e => log(`[Player Error] Playback error: ${e.message}`));
     } else {
       audio.pause();
     }
-  }, [log, currentPodcastId]);
+  }, [log, currentPodcastId, activePlayerTime]);
 
   const startLoadingNewTrack = useCallback((trackId: string) => {
       log(`[App] startLoadingNewTrack called for id: ${trackId}`);
