@@ -11,7 +11,6 @@ import * as db from './lib/db';
 import { db as firestore } from './firebase';
 
 import AppUI from './components/AppUI';
-// Fix: Import AuthForm component to resolve 'Cannot find name' error.
 import AuthForm from './components/AuthForm';
 import Confetti from './components/Confetti';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -99,16 +98,26 @@ export default function App() {
   // --- NEW: Centralized Audio Control ---
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
-  // Fix: The error "Expected 1 arguments, but got 0" on line 99 likely refers to this line.
-  // The useRef hook requires an initial value.
+  // Fix: Explicitly pass undefined to useRef. While calling it with no arguments is valid, 
+  // this is more explicit and avoids potential issues with specific toolchain versions that could cause the reported error.
   const audioSrcRef = useRef<string | undefined>(undefined);
   const { log } = useDebug();
   const [isPlaybackLoading, setIsPlaybackLoading] = useState(false);
   const [audioSrc, setAudioSrc] = useState<string | undefined>();
+  const loadingTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     audioSrcRef.current = audioSrc;
   }, [audioSrc]);
+  
+  useEffect(() => {
+    // Cleanup function to clear timeout on unmount
+    return () => {
+        if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+        }
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -205,78 +214,48 @@ export default function App() {
     ));
   }, [allPodcastsSorted, useCollectionsView, currentView]);
 
-  const startPlayback = useCallback(async (id: string) => {
-    log(`[App] startPlayback called for id: ${id}`);
-    const audio = audioRef.current;
-    if (!audio) {
-      log('[App Error] Audio ref is null, cannot start playback.');
-      return;
-    }
-
-    setIsPlaybackLoading(true);
-    const podcastToPlay = podcasts.find(p => p.id === id);
-    if (!podcastToPlay) {
-      log(`[App Error] Podcast with id ${id} not found.`);
-      setIsPlaybackLoading(false);
-      return;
-    }
-
-    setCurrentPodcastId(id);
-    setActivePlayerTime(podcastToPlay.progress);
-    if (!isPlayerExpanded) setIsPlayerExpanded(true);
-    
-    if (audioSrcRef.current && audioSrcRef.current.startsWith('blob:')) {
-      log(`[App] Revoking old object URL: ${audioSrcRef.current}`);
-      URL.revokeObjectURL(audioSrcRef.current);
-    }
-
-    let newSrc: string | undefined;
-    if (podcastToPlay.storage === 'indexeddb') {
-      try {
-        log(`[App] Loading audio from IndexedDB for id: ${id}`);
-        const blob = await db.getAudio(id);
-        if (blob) {
-          newSrc = URL.createObjectURL(blob);
-          log(`[App] Created new object URL: ${newSrc}`);
-        } else { 
-          throw new Error('Blob not found in IndexedDB.');
-        }
-      } catch (error) {
-        log(`[App Error] Failed to load from IndexedDB: ${error}`);
-        alert("Could not load audio file. It may have been deleted.");
-        setIsPlaybackLoading(false);
-        return;
-      }
-    } else {
-      newSrc = podcastToPlay.url;
-      log(`[App] Using preloaded URL: ${newSrc}`);
-    }
-    
-    setAudioSrc(newSrc);
-    audio.src = newSrc || '';
-    audio.load();
-    
-    try {
-      log('[App] Calling audio.play()');
-      await audio.play();
-    } catch (error: any) {
-      log(`[App Error] audio.play() was rejected: ${error.name} - ${error.message}`);
-      setIsPlaying(false);
-      setIsPlaybackLoading(false);
-    }
-  }, [podcasts, isPlayerExpanded, log, setIsPlayerExpanded, setIsPlaying]);
-
   const handleTogglePlayPause = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !currentPodcastId) return;
     if (audio.paused) {
       audio.play().catch(e => log(`[Player Error] Playback error: ${e.message}`));
     } else {
       audio.pause();
     }
-  }, [log]);
+  }, [log, currentPodcastId]);
+
+  const startLoadingNewTrack = useCallback((trackId: string) => {
+      log(`[App] startLoadingNewTrack called for id: ${trackId}`);
+      if (audioRef.current) audioRef.current.pause();
+      
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+
+      setIsPlaying(false);
+      setIsPlaybackLoading(true);
+      setCurrentPodcastId(trackId);
+      
+      const selectedPodcast = podcasts.find(p => p.id === trackId);
+      setActivePlayerTime(selectedPodcast?.progress || 0);
+
+      if (!isPlayerExpanded) setIsPlayerExpanded(true);
+      
+      loadingTimeoutRef.current = window.setTimeout(() => {
+          log('[Player Timeout] Audio loading timed out after 15 seconds.');
+          if (audioRef.current) {
+            audioRef.current.src = ''; // Stop any potential background loading
+          }
+          setIsPlaybackLoading(false); // Hide spinner
+          setCurrentPodcastId(null);   // Reset player state
+          setIsPlayerExpanded(false);
+          alert("The audio file took too long to load. Please check your connection and try again.");
+      }, 15000);
+
+  }, [podcasts, isPlayerExpanded, log]);
 
   const handleSelectPodcast = useCallback((id: string) => {
+    log(`[App] handleSelectPodcast called for id: ${id}`);
     if (id === currentPodcastId) {
         handleTogglePlayPause();
     } else {
@@ -289,10 +268,67 @@ export default function App() {
         if (reviewModeEnabled && lastListened) {
             setReviewPrompt({ show: true, podcastToReview: lastListened, podcastToPlay: selectedPodcast });
         } else {
-            startPlayback(id);
+            startLoadingNewTrack(id);
         }
     }
-  }, [currentPodcastId, isPlaying, podcasts, allPodcastsSorted, reviewModeEnabled, handleTogglePlayPause, setReviewPrompt, startPlayback]);
+  }, [currentPodcastId, podcasts, allPodcastsSorted, reviewModeEnabled, handleTogglePlayPause, setReviewPrompt, startLoadingNewTrack]);
+
+  // Effect to load audio source when currentPodcastId changes
+  useEffect(() => {
+    if (!currentPodcastId) {
+      if(audioRef.current) audioRef.current.src = '';
+      setAudioSrc(undefined);
+      return;
+    }
+
+    const loadAudioSource = async () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      const podcastToPlay = podcasts.find(p => p.id === currentPodcastId);
+      if (!podcastToPlay) {
+        log(`[App Error] Selected podcast with id ${currentPodcastId} not found in loadAudioSource.`);
+        setIsPlaybackLoading(false);
+        return;
+      }
+
+      log(`[App Loader] Starting to load audio for ${podcastToPlay.name}`);
+
+      if (audioSrcRef.current && audioSrcRef.current.startsWith('blob:')) {
+        log(`[App Loader] Revoking old object URL: ${audioSrcRef.current}`);
+        URL.revokeObjectURL(audioSrcRef.current);
+      }
+
+      let newSrc: string | undefined;
+      if (podcastToPlay.storage === 'indexeddb') {
+        try {
+          log(`[App Loader] Getting audio from IndexedDB for id: ${currentPodcastId}`);
+          const blob = await db.getAudio(currentPodcastId);
+          if (blob) {
+            newSrc = URL.createObjectURL(blob);
+            log(`[App Loader] Created new object URL: ${newSrc}`);
+          } else {
+            throw new Error('Blob not found in IndexedDB.');
+          }
+        } catch (error) {
+          log(`[App Error] Failed to load from IndexedDB: ${error}`);
+          alert("Could not load audio file. It may have been deleted.");
+          setIsPlaybackLoading(false);
+          setCurrentPodcastId(null);
+          return;
+        }
+      } else {
+        newSrc = podcastToPlay.url;
+        log(`[App Loader] Using preloaded URL: ${newSrc}`);
+      }
+
+      setAudioSrc(newSrc);
+      audio.src = newSrc || '';
+    };
+    
+    loadAudioSource();
+  }, [currentPodcastId, podcasts, log]);
+
 
   const handlePlaybackEnd = () => {
     if (isPlayerExpanded) {
@@ -328,7 +364,7 @@ export default function App() {
     }
   
     if (nextPodcastOnEnd) {
-      startPlayback(nextPodcastOnEnd);
+      startLoadingNewTrack(nextPodcastOnEnd);
       setNextPodcastOnEnd(null);
       return;
     }
@@ -338,9 +374,7 @@ export default function App() {
     if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
       const nextPodcast = podcastsInCurrentView[currentIndex + 1];
       if (nextPodcast) {
-        setCurrentPodcastId(nextPodcast.id);
-        setActivePlayerTime(nextPodcast.progress);
-        setIsPlaying(false);
+        startLoadingNewTrack(nextPodcast.id);
       } else {
         setIsPlaying(false);
       }
@@ -618,7 +652,16 @@ export default function App() {
   // --- NEW: Audio Event Handlers ---
   const handleAudioPlay = useCallback(() => { log('[Player Event] onPlay'); setIsPlaying(true); }, [log, setIsPlaying]);
   const handleAudioPause = useCallback(() => { log('[Player Event] onPause'); setIsPlaying(false); }, [log, setIsPlaying]);
-  const handleCanPlay = useCallback(() => { log('[Player Event] onCanPlay.'); setIsPlaybackLoading(false); }, [log]);
+  
+  const handleCanPlay = useCallback(() => {
+    log('[Player Event] onCanPlay.');
+    if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+    }
+    setIsPlaybackLoading(false);
+  }, [log]);
+  
   const handleWaiting = useCallback(() => { log('[Player Event] onWaiting (buffering).'); setIsPlaybackLoading(true); }, [log]);
   const handlePlaying = useCallback(() => { log('[Player Event] onPlaying.'); setIsPlaybackLoading(false); }, [log]);
   
@@ -658,6 +701,10 @@ export default function App() {
   }, [currentPodcast, updatePodcastProgress, handlePlaybackEnd, log]);
   
   const handleAudioError = useCallback((e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
+    if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+    }
     const audio = e.currentTarget;
     const error = audio.error;
     if (error) {
@@ -796,7 +843,6 @@ export default function App() {
             onClearLocalFiles={handleClearLocalFiles}
             onResetPreloaded={handleResetPreloaded}
             onClearAll={handleClearAll}
-            // Fix: Corrected prop value to pass the handler function.
             onUpdatePreloadedData={handleUpdatePreloadedData}
             totalStorageUsed={totalStorageUsed}
             onSelectPodcast={handleSelectPodcast}
