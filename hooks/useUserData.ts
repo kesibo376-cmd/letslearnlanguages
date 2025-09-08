@@ -44,7 +44,7 @@ export const getDefaultData = () => ({
     streakData: DEFAULT_STREAK_DATA,
     hideCompleted: false,
     reviewModeEnabled: false,
-    completionSound: 'random' as CompletionSound,
+    completionSound: 'minecraft' as CompletionSound,
     useCollectionsView: true,
     playOnNavigate: false,
     hasCompletedOnboarding: false,

@@ -142,9 +142,10 @@ const Player: React.FC<PlayerProps> = ({
     );
   };
 
-  const DefaultExpandedPlayer = () => (
-      <div className="flex-grow flex flex-col items-center justify-center text-center gap-6 sm:gap-8">
-        <div className={`w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 bg-brand-surface rounded-lg shadow-2xl overflow-hidden b-border b-shadow transition-transform ${isPlaying && !isLoading ? 'animate-pulse-slow' : ''}`}>
+  const DefaultExpandedPlayer = () => {
+    return (
+      <div className="flex-grow flex flex-col items-center justify-center text-center gap-4 sm:gap-6">
+        <div className={`w-48 h-48 sm:w-64 sm:h-64 bg-brand-surface rounded-lg shadow-2xl overflow-hidden b-border b-shadow transition-transform ${isPlaying && !isLoading ? 'animate-pulse-slow' : ''}`}>
           <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-brand-text">{podcast.name}</h2>
@@ -182,7 +183,8 @@ const Player: React.FC<PlayerProps> = ({
           )}
         </div>
       </div>
-  );
+    );
+  };
 
   return (
     <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>

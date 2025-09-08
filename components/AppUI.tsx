@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode, Language } from '../types';
@@ -295,6 +296,9 @@ const AppUI: React.FC<AppUIProps> = (props) => {
           user={user}
           onLogout={onLogout}
           onUpdatePreloadedData={onUpdatePreloadedData}
+          podcasts={podcasts}
+          collections={collections}
+          setPodcasts={setPodcasts}
       />
 
        <ReviewModal
