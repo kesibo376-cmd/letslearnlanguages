@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -250,7 +251,10 @@ export default function App() {
     }
     const audio = audioRef.current;
     
-    const handlePlay = () => setIsPlaying(true);
+    const handlePlay = () => {
+      setIsPlaying(true);
+      setIsPlayerExpanded(true);
+    };
     const handlePause = () => setIsPlaying(false);
     const handleTimeUpdate = () => {
         if (!audio) return;
