@@ -111,7 +111,12 @@ export default function App() {
   const currentPodcast = useMemo(() => allPodcastsSorted.find(p => p.id === currentPodcastId), [allPodcastsSorted, currentPodcastId]);
 
   // Data setters
-  const setPodcasts = (newPodcasts: Podcast[] | ((prevState: Podcast[]) => Podcast[])) => updateUserData({ podcasts: newPodcasts });
+  const setPodcasts = (newPodcastsOrFn: Podcast[] | ((prevState: Podcast[]) => Podcast[])) => {
+    const finalPodcasts = typeof newPodcastsOrFn === 'function' 
+        ? newPodcastsOrFn(podcasts || []) 
+        : newPodcastsOrFn;
+    updateUserData({ podcasts: finalPodcasts });
+  };
   const setCollections = (newCollections: Collection[]) => updateUserData({ collections: newCollections });
   const setTitle = (newTitle: string) => updateUserData({ title: newTitle });
   const setStreakData = (newStreakData: StreakData) => updateUserData({ streakData: newStreakData });
@@ -172,7 +177,7 @@ export default function App() {
         }
     }
     setIsLoading(false);
-  }, [useCollectionsView]);
+  }, [useCollectionsView, setPodcasts]);
 
   const handleDeletePodcast = useCallback(async (id: string) => {
     const podcastToDelete = podcasts.find((p: Podcast) => p.id === id);
@@ -185,7 +190,7 @@ export default function App() {
       setCurrentPodcastId(null);
       setIsPlaying(false);
     }
-  }, [podcasts, currentPodcastId]);
+  }, [podcasts, currentPodcastId, setPodcasts]);
 
   const handleDeleteCollection = useCallback((id: string) => {
     // Reassign podcasts to uncategorized
@@ -193,14 +198,15 @@ export default function App() {
     setPodcasts(updatedPodcasts);
     // Remove collection
     setCollections(collections.filter((c: Collection) => c.id !== id));
-  }, [podcasts, collections]);
+  }, [podcasts, collections, setPodcasts, setCollections]);
   
   const updatePodcastProgress = useCallback((podcastId: string | null, progress: number) => {
-      if (!podcastId || !isFinite(progress) || progress <= 0) return;
+      if (!podcastId || !isFinite(progress) || progress < 0) return;
 
       setPodcasts(prevPodcasts => {
+          // Avoid saving progress if it's within a second of the end
           const podcast = prevPodcasts.find(p => p.id === podcastId);
-          if (podcast && progress >= podcast.duration - 1) {
+          if (podcast && podcast.duration > 0 && progress >= podcast.duration - 1) {
               return prevPodcasts;
           }
           return prevPodcasts.map(p =>
@@ -220,7 +226,7 @@ export default function App() {
     const newPodcast = allPodcastsSorted.find(p => p.id === id);
     if (!newPodcast) return;
     
-    if (audioRef.current) {
+    if (audioRef.current && currentPodcastId) {
         updatePodcastProgress(currentPodcastId, audioRef.current.currentTime);
     }
 
@@ -275,7 +281,9 @@ export default function App() {
     };
     const handlePause = () => {
         setIsPlaying(false);
-        updatePodcastProgress(currentPodcastId, audio.currentTime);
+        if (audio) {
+          updatePodcastProgress(currentPodcastId, audio.currentTime);
+        }
     };
     const handleTimeUpdate = () => {
         if (audio) {
@@ -308,8 +316,7 @@ export default function App() {
                 if (podcastToPlay.collectionId !== currentPodcast?.collectionId) {
                     setCurrentView(podcastToPlay.collectionId || 'uncategorized');
                 }
-                setCurrentPodcastId(id);
-                setIsPlaying(true);
+                onSelectPodcast(id);
             }
         };
 
@@ -345,7 +352,7 @@ export default function App() {
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('waiting', handleWaiting);
     };
-  }, [currentPodcastId, podcasts, recordCompletion, streakData.enabled, streakData.difficulty, completionSound, allPodcastsSorted, nextPodcastOnEnd, podcastsInCurrentView, currentPodcast?.collectionId, updatePodcastProgress]);
+  }, [currentPodcastId, podcasts, recordCompletion, streakData.enabled, streakData.difficulty, completionSound, allPodcastsSorted, nextPodcastOnEnd, podcastsInCurrentView, currentPodcast?.collectionId, setPodcasts, onSelectPodcast, updatePodcastProgress]);
   
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -367,6 +374,7 @@ export default function App() {
         if(audioRef.current) {
             audioRef.current.pause();
             audioRef.current.src = '';
+            audioRef.current.removeAttribute('src');
         }
         return;
     }
@@ -379,25 +387,22 @@ export default function App() {
         setIsPlaybackLoading(true);
         
         try {
-            let src = '';
+            let audioSrc: string;
             if (podcastToLoad.storage === 'indexeddb') {
                 const audioBlob = await db.getAudio(podcastToLoad.id);
                 if (audioBlob) {
                     objectUrlRef.current = URL.createObjectURL(audioBlob);
-                    src = objectUrlRef.current;
+                    audioSrc = objectUrlRef.current;
                 } else {
                     throw new Error(`Audio blob not found for ID: ${podcastToLoad.id}`);
                 }
             } else { 
-                const response = await fetch(podcastToLoad.url);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const audioBlob = await response.blob();
-                objectUrlRef.current = URL.createObjectURL(audioBlob);
-                src = objectUrlRef.current;
+                // For preloaded files, we can stream them directly
+                audioSrc = podcastToLoad.url;
             }
 
-            if (src && audioRef.current) {
-                audioRef.current.src = src;
+            if (audioSrc && audioRef.current) {
+                audioRef.current.src = audioSrc;
                 audioRef.current.currentTime = podcastToLoad.progress || 0;
                 audioRef.current.play().catch(e => {
                   console.error("Error playing audio on load:", e);
@@ -420,7 +425,7 @@ export default function App() {
             objectUrlRef.current = null;
         }
     };
-  }, [currentPodcastId]);
+  }, [currentPodcastId, allPodcastsSorted]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
