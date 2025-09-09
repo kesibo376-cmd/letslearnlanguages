@@ -1,5 +1,6 @@
 
 
+
 import React, { useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Podcast, Collection, Theme, StreakData, CompletionSound, User, LayoutMode, Language } from '../types';
@@ -147,6 +148,20 @@ const AppUI: React.FC<AppUIProps> = (props) => {
   }, [currentView, collections]);
 
   const collectionArtworkUrl = currentCollection?.artworkUrl;
+
+  const handlePlayNext = useCallback(() => {
+    const currentIndex = allPodcastsSorted.findIndex(p => p.id === currentPodcastId);
+    if (currentIndex !== -1 && currentIndex < allPodcastsSorted.length - 1) {
+      onSelectPodcast(allPodcastsSorted[currentIndex + 1].id);
+    }
+  }, [allPodcastsSorted, currentPodcastId, onSelectPodcast]);
+
+  const handlePlayPrevious = useCallback(() => {
+    const currentIndex = allPodcastsSorted.findIndex(p => p.id === currentPodcastId);
+    if (currentIndex > 0) {
+      onSelectPodcast(allPodcastsSorted[currentIndex - 1].id);
+    }
+  }, [allPodcastsSorted, currentPodcastId, onSelectPodcast]);
 
   const handleExportData = () => {
     const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -472,6 +487,10 @@ const AppUI: React.FC<AppUIProps> = (props) => {
                 onTogglePlayPause={onTogglePlayPause}
                 onSkip={onSkip}
                 onSeek={onSeek}
+                title={title}
+                collectionName={currentCollectionName}
+                onPlayNext={handlePlayNext}
+                onPlayPrevious={handlePlayPrevious}
             />
         )}
     </>

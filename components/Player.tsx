@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import type { Podcast, LayoutMode } from '../types';
 import { formatTime } from '../lib/utils';
@@ -25,6 +26,10 @@ interface PlayerProps {
   onTogglePlayPause: () => void;
   onSkip: (seconds: number) => void;
   onSeek: (newTime: number) => void;
+  title: string;
+  collectionName: string | null;
+  onPlayNext: () => void;
+  onPlayPrevious: () => void;
 }
 
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
@@ -46,6 +51,10 @@ const Player: React.FC<PlayerProps> = ({
   onTogglePlayPause,
   onSkip,
   onSeek,
+  title,
+  collectionName,
+  onPlayNext,
+  onPlayPrevious,
 }) => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
 
@@ -69,6 +78,78 @@ const Player: React.FC<PlayerProps> = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isPlayerExpanded, setIsPlayerExpanded, onTogglePlayPause]);
+
+  // Media Session API: Metadata and Action Handlers
+  useEffect(() => {
+      if (!('mediaSession' in navigator) || !podcast) {
+          return;
+      }
+      
+      const safeArtworkUrl = artworkUrl || 'https://i.imgur.com/Q3QfWqV.png';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+          title: podcast.name,
+          artist: collectionName || title,
+          album: title,
+          artwork: [
+              { src: safeArtworkUrl, sizes: '96x96', type: 'image/png' },
+              { src: safeArtworkUrl, sizes: '128x128', type: 'image/png' },
+              { src: safeArtworkUrl, sizes: '192x192', type: 'image/png' },
+              { src: safeArtworkUrl, sizes: '256x256', type: 'image/png' },
+              { src: safeArtworkUrl, sizes: '384x384', type: 'image/png' },
+              { src: safeArtworkUrl, sizes: '512x512', type: 'image/png' },
+          ],
+      });
+
+      const actionHandlers: [MediaSessionAction, MediaSessionActionHandler | null][] = [
+          ['play', onTogglePlayPause],
+          ['pause', onTogglePlayPause],
+          ['seekbackward', () => onSkip(-10)],
+          ['seekforward', () => onSkip(10)],
+          ['nexttrack', onPlayNext],
+          ['previoustrack', onPlayPrevious],
+      ];
+
+      for (const [action, handler] of actionHandlers) {
+          try {
+              navigator.mediaSession.setActionHandler(action, handler);
+          } catch (error) {
+              console.warn(`The media session action '${action}' is not supported.`);
+          }
+      }
+      
+      return () => {
+            for (const [action] of actionHandlers) {
+                try {
+                  navigator.mediaSession.setActionHandler(action, null);
+                } catch (error) {
+                    console.warn(`Could not clear media session action '${action}'.`);
+                }
+          }
+      };
+  }, [podcast, artworkUrl, title, collectionName, onTogglePlayPause, onSkip, onPlayNext, onPlayPrevious]);
+
+  // Media Session API: Playback State
+  useEffect(() => {
+      if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+      }
+  }, [isPlaying]);
+  
+  // Media Session API: Position State
+  useEffect(() => {
+      if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession && podcast?.duration) {
+          try {
+              navigator.mediaSession.setPositionState({
+                  duration: podcast.duration,
+                  playbackRate: playbackRate,
+                  position: currentTime,
+              });
+          } catch (error) {
+              console.warn("Failed to set position state:", error);
+          }
+      }
+  }, [currentTime, podcast?.duration, playbackRate]);
 
   const handleSkipClick = (seconds: number, e?: React.MouseEvent) => {
     e?.stopPropagation();

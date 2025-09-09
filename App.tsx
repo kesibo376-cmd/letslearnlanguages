@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -62,438 +61,91 @@ export default function App() {
     showPlaybackSpeedControl,
     lastPlayedCollectionId,
     language,
-    status,
+    status
   } = useUserData(user?.uid);
 
-  const [globalTheme, setGlobalTheme] = useTheme();
-
+  const { log } = useDebug();
+  const [_, setTheme] = useTheme(); // Renaming to avoid conflict, we only need the setter.
   useEffect(() => {
     if (theme) {
-      setGlobalTheme(theme);
+      setTheme(theme);
     }
-  }, [theme, setGlobalTheme]);
+  }, [theme, setTheme]);
+  
+  const { recordActivity, recordCompletion, unrecordCompletion, isTodayComplete } = useStreak(streakData, updateUserData);
 
-  const { recordActivity, recordCompletion, unrecordCompletion, isTodayComplete, resetStreakProgress } = useStreak(streakData, updateUserData);
-
+  // App State
   const [currentPodcastId, setCurrentPodcastId] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // For file uploads
-  const [isPlayerExpanded, setIsPlayerExpanded] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPlaybackLoading, setIsPlaybackLoading] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const soundAudioRef = useRef<HTMLAudioElement>(null);
-  const [reviewPrompt, setReviewPrompt] = useState<{ show: boolean; podcastToReview: Podcast | null; podcastToPlay: Podcast | null }>({ show: false, podcastToReview: null, podcastToPlay: null });
-  const [nextPodcastOnEnd, setNextPodcastOnEnd] = useState<string | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [activePlayerTime, setActivePlayerTime] = useState(0);
-  const [podcastsToCategorize, setPodcastsToCategorize] = useState<Podcast[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [reviewPrompt, setReviewPrompt] = useState<{ show: boolean; podcastToReview: Podcast | null; podcastToPlay: Podcast | null; }>({ show: false, podcastToReview: null, podcastToPlay: null });
+  const [nextPodcastOnEnd, setNextPodcastOnEnd] = useState<string | null>(null);
   const [isCategorizeModalOpen, setIsCategorizeModalOpen] = useState(false);
+  const [podcastsToCategorize, setPodcastsToCategorize] = useState<Podcast[]>([]);
   const [isCreateCollectionModalOpen, setIsCreateCollectionModalOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<string | null>(null); // null for all, collection.id for specific
   const [isClearDataModalOpen, setIsClearDataModalOpen] = useState(false);
-  const [isAppReady, setIsAppReady] = useState(false);
-  const [isMinLoadTimeMet, setIsMinLoadTimeMet] = useState(false);
-  const [isDebugMode, setIsDebugMode] = useState(false);
-  const [lastRandomSound, setLastRandomSound] = useState<string | null>(null);
-
-  // --- NEW: Centralized Audio Control ---
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const progressUpdateDebounceRef = useRef<number | undefined>(undefined);
-  // Fix: Explicitly pass undefined to useRef. While calling it with no arguments is valid, 
-  // this is more explicit and avoids potential issues with specific toolchain versions that could cause the reported error.
-  const audioSrcRef = useRef<string | undefined>(undefined);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const { log } = useDebug();
-  const [isPlaybackLoading, setIsPlaybackLoading] = useState(false);
-  const [audioSrc, setAudioSrc] = useState<string | undefined>();
-  const loadingTimeoutRef = useRef<number | null>(null);
-  const podcastsRef = useRef(podcasts);
   
-  useEffect(() => {
-    podcastsRef.current = podcasts;
-  }, [podcasts]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const prevProgressRef = useRef<number>(0);
 
-  useEffect(() => {
-    audioSrcRef.current = audioSrc;
-  }, [audioSrc]);
+  // Derived State
+  const allPodcastsSorted = useMemo(() => [...(podcasts || [])].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })), [podcasts]);
   
-  useEffect(() => {
-    // Cleanup function to clear timeout on unmount
-    return () => {
-        if (loadingTimeoutRef.current) {
-            clearTimeout(loadingTimeoutRef.current);
-        }
-    };
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('debug') === 'true') {
-      setIsDebugMode(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsMinLoadTimeMet(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthLoading && (!user || (user && !isDataLoading))) {
-        setIsAppReady(true);
-    }
-  }, [isAuthLoading, user, isDataLoading]);
-
-  useEffect(() => {
-    const shouldLockScroll = isPlayerExpanded || isSettingsOpen || (user && !hasCompletedOnboarding) || isCategorizeModalOpen || isCreateCollectionModalOpen;
-    document.body.style.overflow = shouldLockScroll ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isPlayerExpanded, isSettingsOpen, hasCompletedOnboarding, isCategorizeModalOpen, isCreateCollectionModalOpen, user]);
-
-  const currentPodcast = useMemo(() =>
-    podcasts.find(p => p.id === currentPodcastId),
-    [podcasts, currentPodcastId]
-  );
-  
-  const handleSetCustomArtwork = (url: string | null) => {
-    if (!user) return;
-    updateUserData({ customArtwork: url });
-  };
-  
-  const handleSetStreakData = useCallback((newStreakData: StreakData) => {
-    updateUserData({ streakData: newStreakData });
-  }, [updateUserData]);
-
-  const updatePodcastInState = (podcastId: string, updates: Partial<Podcast>) => {
-    const currentPodcasts = data?.podcasts || [];
-    const podcastIndex = currentPodcasts.findIndex(p => p.id === podcastId);
-    if (podcastIndex > -1) {
-        const newPodcasts = [...currentPodcasts];
-        newPodcasts[podcastIndex] = { ...newPodcasts[podcastIndex], ...updates };
-        updateUserData({ podcasts: newPodcasts });
-    }
-  }
-
-  const updatePodcastProgress = useCallback((id: string, progress: number) => {
-    if (streakData.enabled && streakData.difficulty === 'easy') {
-      recordActivity();
-    }
-    
-    const podcast = podcasts.find(p => p.id === id);
-    if (!podcast) return;
-
-    const isFinished = podcast.duration > 0 && progress >= podcast.duration - 1;
-    let podcastWasCompleted = false;
-    if (isFinished && !podcast.isListened) {
-        podcastWasCompleted = true;
-    }
-
-    updatePodcastInState(id, { progress, isListened: podcast.isListened || isFinished });
-
-    if (podcastWasCompleted && streakData.enabled && streakData.difficulty !== 'easy') {
-      recordCompletion(id);
-    }
-  }, [podcasts, recordActivity, recordCompletion, streakData.enabled, streakData.difficulty, updateUserData]);
-
-    const updatePodcastDuration = useCallback((id: string, duration: number) => {
-    if (!isNaN(duration) && duration > 0) {
-      const podcast = podcasts.find(p => p.id === id);
-      if (podcast && podcast.duration === 0) {
-        updatePodcastInState(id, { duration });
-      }
-    }
-  }, [podcasts, updatePodcastInState]);
-
-  const allPodcastsSorted = useMemo(() => {
-    return [...podcasts].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-  }, [podcasts]);
-
   const podcastsInCurrentView = useMemo(() => {
-    if (!useCollectionsView || !currentView) {
+    if (!useCollectionsView || currentView === null) {
+        if (currentView === 'uncategorized') return allPodcastsSorted.filter(p => p.collectionId === null);
         return allPodcastsSorted;
     }
-    return allPodcastsSorted.filter(p => (
-        currentView === 'uncategorized' ? p.collectionId === null : p.collectionId === currentView
-    ));
+    const collectionId = currentView === 'uncategorized' ? null : currentView;
+    return allPodcastsSorted.filter(p => p.collectionId === collectionId);
   }, [allPodcastsSorted, useCollectionsView, currentView]);
 
-  const handleTogglePlayPause = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentPodcastId) return;
+  const currentPodcast = useMemo(() => allPodcastsSorted.find(p => p.id === currentPodcastId), [allPodcastsSorted, currentPodcastId]);
 
-    // Initialize AudioContext on first play command to ensure it's created by user interaction.
-    if (!audioContextRef.current && audio) {
-      try {
-        const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const source = context.createMediaElementSource(audio);
-        source.connect(context.destination);
-        audioContextRef.current = context;
-        audioSourceNodeRef.current = source;
-        log('[AudioContext] Initialized successfully on user gesture.');
-      } catch (e) {
-        log(`[AudioContext Error] Could not create AudioContext: ${e instanceof Error ? e.message : String(e)}`);
-      }
-    }
+  // Data setters
+  const setPodcasts = (newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts });
+  const setCollections = (newCollections: Collection[]) => updateUserData({ collections: newCollections });
+  const setTitle = (newTitle: string) => updateUserData({ title: newTitle });
+  const setStreakData = (newStreakData: StreakData) => updateUserData({ streakData: newStreakData });
+  const setHideCompleted = (value: boolean) => updateUserData({ hideCompleted: value });
+  const setReviewModeEnabled = (value: boolean) => updateUserData({ reviewModeEnabled: value });
+  const setCompletionSound = (sound: CompletionSound) => updateUserData({ completionSound: sound });
+  const setUseCollectionsView = (value: boolean) => updateUserData({ useCollectionsView: value });
+  const setPlayOnNavigate = (value: boolean) => updateUserData({ playOnNavigate: value });
+  const setPlayerLayout = (layout: LayoutMode) => updateUserData({ playerLayout: layout });
+  const setLanguage = (lang: Language) => updateUserData({ language: lang });
+  const setShowPlaybackSpeedControl = (value: boolean) => updateUserData({ showPlaybackSpeedControl: value });
+  const setLastPlayedCollectionId = (id: string | null) => updateUserData({ lastPlayedCollectionId: id });
 
-    const audioContext = audioContextRef.current;
-
-    if (audio.paused) {
-      const playAudio = () => {
-        // No more time drift correction. The browser will handle resuming from the correct currentTime.
-        audio.play().catch(e => log(`[Player Error] Playback error: ${e instanceof Error ? e.message : String(e)}`));
+  // Audio Processing and File Handling
+  const getAudioDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = document.createElement('audio');
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(audio.src);
+        resolve(audio.duration);
       };
-
-      // If the AudioContext was suspended by the browser (common for power-saving), resume it first.
-      if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          log('[AudioContext] Resumed from suspended state.');
-          playAudio();
-        }).catch(e => {
-            log(`[AudioContext Error] Failed to resume: ${e instanceof Error ? e.message : String(e)}`);
-            playAudio(); // Attempt to play anyway.
-        });
-      } else {
-        playAudio();
-      }
-    } else {
-      audio.pause();
-    }
-  }, [log, currentPodcastId]);
-
-  const startLoadingNewTrack = useCallback((trackId: string) => {
-      log(`[App] startLoadingNewTrack called for id: ${trackId}`);
-      if (audioRef.current) audioRef.current.pause();
-      
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-
-      setIsPlaying(false);
-      setIsPlaybackLoading(true);
-      setCurrentPodcastId(trackId);
-      
-      const selectedPodcast = podcasts.find(p => p.id === trackId);
-      setActivePlayerTime(selectedPodcast?.progress || 0);
-
-      if (!isPlayerExpanded) setIsPlayerExpanded(true);
-      
-      loadingTimeoutRef.current = window.setTimeout(() => {
-          log('[Player Timeout] Audio loading timed out after 15 seconds.');
-          if (audioRef.current) {
-            audioRef.current.src = ''; // Stop any potential background loading
-          }
-          setIsPlaybackLoading(false); // Hide spinner
-          setCurrentPodcastId(null);   // Reset player state
-          setIsPlayerExpanded(false);
-          alert("The audio file took too long to load. Please check your connection and try again.");
-      }, 15000);
-
-  }, [podcasts, isPlayerExpanded, log]);
-
-  const handleSelectPodcast = useCallback((id: string) => {
-    log(`[App] handleSelectPodcast called for id: ${id}`);
-    if (id === currentPodcastId) {
-        handleTogglePlayPause();
-    } else {
-        const selectedPodcast = podcasts.find(p => p.id === id);
-        if (!selectedPodcast) return;
-        
-        // Update the last played collection ID when a new podcast is selected
-        if (selectedPodcast.collectionId !== lastPlayedCollectionId) {
-            updateUserData({ lastPlayedCollectionId: selectedPodcast.collectionId ?? null });
-        }
-        
-        const previouslyListened = allPodcastsSorted.filter(p => p.isListened && p.id !== id);
-        const lastListened = previouslyListened[previouslyListened.length - 1];
-
-        if (reviewModeEnabled && lastListened) {
-            setReviewPrompt({ show: true, podcastToReview: lastListened, podcastToPlay: selectedPodcast });
-        } else {
-            startLoadingNewTrack(id);
-        }
-    }
-  }, [currentPodcastId, podcasts, allPodcastsSorted, reviewModeEnabled, handleTogglePlayPause, setReviewPrompt, startLoadingNewTrack, lastPlayedCollectionId, updateUserData]);
-
-  // Effect to load audio source when currentPodcastId changes
-  useEffect(() => {
-    if (!currentPodcastId) {
-      if(audioRef.current) audioRef.current.src = '';
-      setAudioSrc(undefined);
-      return;
-    }
-
-    const loadAudioSource = async () => {
-      const audio = audioRef.current;
-      if (!audio) return;
-
-      const podcastToPlay = podcastsRef.current.find(p => p.id === currentPodcastId);
-      if (!podcastToPlay) {
-        log(`[App Error] Selected podcast with id ${currentPodcastId} not found in loadAudioSource.`);
-        setIsPlaybackLoading(false);
-        return;
-      }
-
-      log(`[App Loader] Starting to load audio for ${podcastToPlay.name}`);
-
-      if (audioSrcRef.current && audioSrcRef.current.startsWith('blob:')) {
-        log(`[App Loader] Revoking old object URL: ${audioSrcRef.current}`);
-        URL.revokeObjectURL(audioSrcRef.current);
-      }
-
-      let newSrc: string | undefined;
-      if (podcastToPlay.storage === 'indexeddb') {
-        try {
-          log(`[App Loader] Getting audio from IndexedDB for id: ${currentPodcastId}`);
-          const blob = await db.getAudio(currentPodcastId);
-          if (blob) {
-            newSrc = URL.createObjectURL(blob);
-            log(`[App Loader] Created new object URL: ${newSrc}`);
-          } else {
-            throw new Error('Blob not found in IndexedDB.');
-          }
-        } catch (error) {
-          log(`[App Error] Failed to load from IndexedDB: ${error}`);
-          alert("Could not load audio file. It may have been deleted.");
-          setIsPlaybackLoading(false);
-          setCurrentPodcastId(null);
-          return;
-        }
-      } else {
-        newSrc = podcastToPlay.url;
-        log(`[App Loader] Using preloaded URL: ${newSrc}`);
-      }
-
-      setAudioSrc(newSrc);
-      audio.src = newSrc || '';
-    };
-    
-    loadAudioSource();
-  }, [currentPodcastId, log, setCurrentPodcastId]);
-
-
-  const handlePlaybackEnd = () => {
-    if (isPlayerExpanded) {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
-    }
-  
-    if (completionSound !== 'none') {
-      let soundUrl: string | undefined;
-  
-      if (completionSound === 'random') {
-        const soundKeys = Object.keys(COMPLETION_SOUND_URLS) as (keyof typeof COMPLETION_SOUND_URLS)[];
-        if (soundKeys.length > 0) {
-          let randomKey: keyof typeof COMPLETION_SOUND_URLS;
-          // Ensure a different sound plays if possible
-          if (soundKeys.length > 1 && lastRandomSound) {
-            const availableSounds = soundKeys.filter(key => key !== lastRandomSound);
-            randomKey = availableSounds[Math.floor(Math.random() * availableSounds.length)];
-          } else {
-            // Pick any sound if it's the first time or only one sound exists
-            randomKey = soundKeys[Math.floor(Math.random() * soundKeys.length)];
-          }
-          setLastRandomSound(randomKey); // Store the key of the sound we just played
-          soundUrl = COMPLETION_SOUND_URLS[randomKey];
-        }
-      } else {
-        soundUrl = COMPLETION_SOUND_URLS[completionSound];
-      }
-  
-      if (soundUrl && soundAudioRef.current) {
-        soundAudioRef.current.src = soundUrl;
-        soundAudioRef.current.play().catch(e => console.error("Error playing completion sound:", e));
-      }
-    }
-  
-    if (currentPodcastId) {
-      updatePodcastInState(currentPodcastId, { isListened: true, progress: 0 });
-      setActivePlayerTime(0);
-    } else {
-      setIsPlaying(false);
-      return;
-    }
-  
-    if (nextPodcastOnEnd) {
-      startLoadingNewTrack(nextPodcastOnEnd);
-      setNextPodcastOnEnd(null);
-      return;
-    }
-  
-    const currentIndex = podcastsInCurrentView.findIndex(p => p.id === currentPodcastId);
-  
-    if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
-      const nextPodcast = podcastsInCurrentView[currentIndex + 1];
-      if (nextPodcast) {
-        startLoadingNewTrack(nextPodcast.id);
-      } else {
-        setIsPlaying(false);
-      }
-    } else {
-      setIsPlaying(false);
-    }
+      audio.onerror = reject;
+      audio.src = window.URL.createObjectURL(file);
+    });
   };
-  
-  const handleOnboardingComplete = () => {
-    updateUserData({ hasCompletedOnboarding: true });
-  };
-  
-  const handleImportData = useCallback((file: File, onSuccess?: () => void) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-          try {
-              const result = event.target?.result;
-              if (typeof result !== 'string') throw new Error("File read error");
-              const importedData = JSON.parse(result);
-              
-              const { podcasts, collections, ...settings } = importedData;
-              
-              updateUserData(settings);
-
-              alert('Settings imported successfully! Note: Audio files and collections are managed in the cloud and not part of the import.');
-              onSuccess?.();
-
-          } catch (error) {
-              alert(`Error importing file: ${error instanceof Error ? error.message : "Unknown error"}`);
-          }
-      };
-      reader.readAsText(file);
-  }, [updateUserData]);
 
   const handleFileUpload = useCallback(async (files: FileList) => {
-    if (!user) return;
     setIsLoading(true);
-
     const newPodcasts: Podcast[] = [];
-
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith('audio/')) {
-        console.warn(`Skipping non-audio file: ${file.name}`);
-        continue;
-      }
-
-      const id = uuidv4();
-      
       try {
+        const duration = await getAudioDuration(file);
+        const id = uuidv4();
         await db.saveAudio(id, file);
-
-        const duration = await new Promise<number>((resolve) => {
-          const audio = document.createElement('audio');
-          audio.src = URL.createObjectURL(file);
-          audio.onloadedmetadata = () => {
-            URL.revokeObjectURL(audio.src);
-            resolve(audio.duration);
-          };
-          audio.onerror = () => {
-            URL.revokeObjectURL(audio.src);
-            resolve(0);
-          }
-        });
-
         newPodcasts.push({
           id,
           name: file.name.replace(/\.[^/.]+$/, ""),
@@ -506,422 +158,408 @@ export default function App() {
           size: file.size,
         });
       } catch (error) {
-        console.error("Error saving file to IndexedDB:", error);
-        alert(`Failed to save ${file.name} locally. Please try again.`);
+        console.error('Error processing file:', file.name, error);
+        alert(`Error processing file: ${file.name}`);
       }
     }
-
+    
     if (newPodcasts.length > 0) {
-      const updatedPodcasts = [...podcasts, ...newPodcasts];
-      updateUserData({ podcasts: updatedPodcasts });
-      
-      if (collections.length > 0 && useCollectionsView) {
-        setPodcastsToCategorize(newPodcasts);
-        setIsCategorizeModalOpen(true);
-      }
+        setPodcasts([...(podcasts || []), ...newPodcasts]);
+        if (useCollectionsView) {
+            setPodcastsToCategorize(newPodcasts);
+            setIsCategorizeModalOpen(true);
+        }
     }
-
     setIsLoading(false);
-  }, [user, podcasts, collections.length, useCollectionsView, updateUserData]);
-  
+  }, [podcasts, useCollectionsView]);
+
   const handleDeletePodcast = useCallback(async (id: string) => {
-    if (!user) return;
-    
-    if (currentPodcastId === id) {
-        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-        setIsPlaying(false);
-        setCurrentPodcastId(null);
-        setIsPlayerExpanded(false);
+    const podcastToDelete = podcasts.find((p: Podcast) => p.id === id);
+    if (podcastToDelete?.storage === 'indexeddb') {
+      await db.deleteAudio(id);
     }
-    
-    const podcastToDelete = podcasts.find(p => p.id === id);
-    if (!podcastToDelete) return;
-    
-    if (podcastToDelete.storage === 'indexeddb') {
-        try {
-            await db.deleteAudio(id);
-        } catch (error) {
-            console.error("Error deleting from IndexedDB:", error);
-            alert("Error deleting local file. Please try again.");
+    const newPodcasts = podcasts.filter((p: Podcast) => p.id !== id);
+    setPodcasts(newPodcasts);
+    if (currentPodcastId === id) {
+      setCurrentPodcastId(null);
+      setIsPlaying(false);
+    }
+  }, [podcasts, currentPodcastId]);
+
+  const handleDeleteCollection = useCallback((id: string) => {
+    // Reassign podcasts to uncategorized
+    const updatedPodcasts = podcasts.map((p: Podcast) => p.collectionId === id ? { ...p, collectionId: null } : p);
+    setPodcasts(updatedPodcasts);
+    // Remove collection
+    setCollections(collections.filter((c: Collection) => c.id !== id));
+  }, [podcasts, collections]);
+  
+  // Player Logic
+  const onSelectPodcast = useCallback((id: string) => {
+    if (id === currentPodcastId) {
+        if (audioRef.current) {
+            audioRef.current.paused ? audioRef.current.play().catch(e => console.error(e)) : audioRef.current.pause();
+        }
+        return;
+    }
+    const newPodcast = allPodcastsSorted.find(p => p.id === id);
+    if (!newPodcast) return;
+
+    if (reviewModeEnabled && currentPodcastId && isPlaying) {
+        const currentIndex = allPodcastsSorted.findIndex(p => p.id === currentPodcastId);
+        const nextIndex = allPodcastsSorted.findIndex(p => p.id === id);
+        
+        if (nextIndex === currentIndex + 1 && !allPodcastsSorted[currentIndex].isListened) {
+            setReviewPrompt({ show: true, podcastToReview: allPodcastsSorted[currentIndex], podcastToPlay: newPodcast });
             return;
         }
     }
 
-    const updatedPodcasts = podcasts.filter(p => p.id !== id);
-    updateUserData({ podcasts: updatedPodcasts });
+    setCurrentPodcastId(id);
+    if (audioRef.current) audioRef.current.currentTime = newPodcast.progress || 0;
+    setIsPlaying(true);
+  }, [currentPodcastId, reviewModeEnabled, allPodcastsSorted, isPlaying]);
 
-  }, [user, currentPodcastId, podcasts, updateUserData]);
-
-  const handleDeleteCollection = useCallback(async (id: string) => {
-    if (!user) return;
-
-    const podcastsToDelete = podcasts.filter((p: Podcast) => p.collectionId === id);
-    const podcastIdsToDelete = new Set(podcastsToDelete.map((p: Podcast) => p.id));
-
-    if (currentPodcastId && podcastIdsToDelete.has(currentPodcastId)) {
-        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-        setIsPlaying(false);
-        setCurrentPodcastId(null);
-        setIsPlayerExpanded(false);
+  const onTogglePlayPause = useCallback(() => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(e => console.error("Play error:", e));
     }
+    setIsPlaying(!isPlaying);
+  }, [isPlaying]);
 
-    for (const podcast of podcastsToDelete) {
-        if (podcast.storage === 'indexeddb') {
-            try {
-                await db.deleteAudio(podcast.id);
-            } catch (error) {
-                console.error(`Failed to delete local audio ${podcast.name}:`, error);
-            }
-        }
+  const onSkip = (seconds: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime + seconds);
     }
+  };
 
-    const updatedPodcasts = podcasts.filter((p: Podcast) => p.collectionId !== id);
-    const updatedCollections = collections.filter((c: Collection) => c.id !== id);
-
-    updateUserData({
-        podcasts: updatedPodcasts,
-        collections: updatedCollections,
-    });
-  }, [user, podcasts, collections, currentPodcastId, updateUserData, setIsPlaying, setIsPlayerExpanded]);
+  const onSeek = (newTime: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+      setActivePlayerTime(newTime);
+    }
+  };
   
-  const handleResetProgress = () => {
-    const resetPodcasts = podcasts.map(p => ({...p, progress: 0, isListened: false}));
-    updateUserData({ podcasts: resetPodcasts });
-    resetStreakProgress();
-  };
+  // Audio Element Effects
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+    const audio = audioRef.current;
+    
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleTimeUpdate = () => {
+        if (!audio) return;
+        const currentTime = audio.currentTime;
+        setActivePlayerTime(currentTime);
 
-  const handleClearLocalFiles = async () => {
-    if (!user) return;
-    if (window.confirm("This will delete all your uploaded audio from this device. Are you sure?")) {
-        setIsLoading(true);
-        if (currentPodcastId && podcasts.find(p => p.id === currentPodcastId)?.storage === 'indexeddb') {
-            if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-            setIsPlaying(false);
-            setCurrentPodcastId(null);
-            setIsPlayerExpanded(false);
+        // Update progress in DB every 5 seconds
+        if (currentPodcastId && Math.abs(currentTime - prevProgressRef.current) > 5) {
+            prevProgressRef.current = currentTime;
+            const updatedPodcasts = podcasts.map((p: Podcast) => p.id === currentPodcastId ? { ...p, progress: currentTime } : p);
+            setPodcasts(updatedPodcasts);
         }
+    };
+    const handleEnded = () => {
+        if (!currentPodcastId) return;
 
-        const localPodcasts = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
-        for (const podcast of localPodcasts) {
-            try {
-                await db.deleteAudio(podcast.id);
-            } catch (error) {
-                console.error(`Failed to delete ${podcast.name} from IndexedDB:`, error);
+        const podcastThatEnded = podcasts.find((p: Podcast) => p.id === currentPodcastId);
+        if (podcastThatEnded && !podcastThatEnded.isListened) {
+            const updatedPodcasts = podcasts.map((p: Podcast) => p.id === currentPodcastId ? { ...p, isListened: true, progress: 0, completedAt: Date.now() } : p);
+            setPodcasts(updatedPodcasts);
+            if (streakData.enabled && streakData.difficulty !== 'easy') recordCompletion(currentPodcastId);
+
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 5000);
+
+            if (completionSound !== 'none') {
+              const soundKeys = Object.keys(COMPLETION_SOUND_URLS) as Exclude<CompletionSound, 'none' | 'random'>[];
+              const soundToPlay = completionSound === 'random' ? soundKeys[Math.floor(Math.random() * soundKeys.length)] : completionSound;
+              const soundUrl = COMPLETION_SOUND_URLS[soundToPlay];
+              if (soundUrl) new Audio(soundUrl).play();
             }
         }
+
+        const playNext = (id: string) => {
+            const podcastToPlay = allPodcastsSorted.find(p => p.id === id);
+            if (podcastToPlay) {
+                if (podcastToPlay.collectionId !== currentPodcast?.collectionId) {
+                    setCurrentView(podcastToPlay.collectionId || 'uncategorized');
+                }
+                setCurrentPodcastId(id);
+                setIsPlaying(true);
+            }
+        };
+
+        if (nextPodcastOnEnd) {
+            playNext(nextPodcastOnEnd);
+            setNextPodcastOnEnd(null);
+            return;
+        }
+
+        const currentIndex = podcastsInCurrentView.findIndex(p => p.id === currentPodcastId);
+        if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
+            playNext(podcastsInCurrentView[currentIndex + 1].id);
+        } else {
+            setIsPlaying(false);
+        }
+    };
+    
+    const handleCanPlay = () => setIsPlaybackLoading(false);
+    const handleWaiting = () => setIsPlaybackLoading(true);
+
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('waiting', handleWaiting);
+
+    return () => {
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('waiting', handleWaiting);
+    };
+  }, [currentPodcastId, podcasts, recordCompletion, streakData.enabled, streakData.difficulty, completionSound, allPodcastsSorted, nextPodcastOnEnd, podcastsInCurrentView, currentPodcast?.collectionId]);
+
+  useEffect(() => {
+    const loadAudio = async () => {
+        if (!currentPodcast || !audioRef.current) return;
         
-        const preloadedOnly = podcasts.filter((p: Podcast) => p.storage !== 'indexeddb');
-        updateUserData({ podcasts: preloadedOnly });
-        setIsClearDataModalOpen(false);
-        setIsLoading(false);
+        setIsPlaybackLoading(true);
+        let src = '';
+        if (currentPodcast.storage === 'indexeddb') {
+            const audioBlob = await db.getAudio(currentPodcast.id);
+            if (audioBlob) {
+                src = URL.createObjectURL(audioBlob);
+            }
+        } else {
+            src = currentPodcast.url;
+        }
+
+        if (src && audioRef.current) {
+            audioRef.current.src = src;
+            audioRef.current.currentTime = currentPodcast.progress || 0;
+            if (isPlaying) {
+              audioRef.current.play().catch(e => {
+                console.error("Error playing audio on load:", e);
+                setIsPlaying(false);
+              });
+            }
+        }
+    };
+    loadAudio();
+  }, [currentPodcast, isPlaying]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  // General Effects
+  useEffect(() => {
+    if (streakData.enabled && streakData.difficulty === 'easy' && isPlaying) {
+        recordActivity();
     }
+  }, [isPlaying, streakData.enabled, streakData.difficulty, recordActivity]);
+
+  // Data Management Functions
+  const handleSetCustomArtwork = (url: string | null) => updateUserData({ customArtwork: url });
+  
+  const dataToExport = {
+    ...data,
+    podcasts: podcasts.filter((p: Podcast) => p.storage === 'preloaded'), // Don't export local files data
+  };
+  
+  const handleImportData = (file: File, onSuccess?: () => void) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target?.result as string);
+        updateUserData(importedData);
+        if (onSuccess) onSuccess();
+      } catch (e) {
+        alert('Invalid backup file.');
+      }
+    };
+    reader.readAsText(file);
   };
 
+  const handleResetProgress = () => {
+    const resetPodcasts = podcasts.map((p: Podcast) => ({ ...p, progress: 0, isListened: false, completedAt: null }));
+    setPodcasts(resetPodcasts);
+    updateUserData({
+      streakData: { ...streakData, currentStreak: 0, lastListenDate: null, history: [], completedToday: [], completionDate: null },
+    });
+  };
+  
+  const handleClearLocalFiles = async () => {
+      const localFiles = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
+      for (const file of localFiles) {
+          await db.deleteAudio(file.id);
+      }
+      setPodcasts(podcasts.filter((p: Podcast) => p.storage !== 'indexeddb'));
+      setIsClearDataModalOpen(false);
+  };
+  
   const handleResetPreloaded = () => {
-    const updatedPodcasts = podcasts.map(p => p.storage === 'preloaded' ? {...p, progress: 0, isListened: false} : p);
-    updateUserData({ podcasts: updatedPodcasts });
-    setIsClearDataModalOpen(false);
+      const defaultData = getDefaultData();
+      const localFiles = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
+      const updatedPodcasts = [...localFiles, ...defaultData.podcasts];
+      setPodcasts(updatedPodcasts);
+      setIsClearDataModalOpen(false);
   };
   
   const handleClearAll = async () => {
-     if (!user) return;
-     if (window.confirm("DANGER: This will delete ALL your uploaded files from this device and reset ALL settings. This cannot be undone. Are you absolutely sure?")) {
-        setIsLoading(true);
-        
-        const localPodcasts = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
-        for (const podcast of localPodcasts) {
-             try {
-                await db.deleteAudio(podcast.id);
-            } catch (error) { console.error(`Failed to delete ${podcast.name}:`, error); }
-        }
-        
-        updateUserData(null); 
-
-        if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-        setIsPlaying(false);
-        setCurrentPodcastId(null);
-        setIsClearDataModalOpen(false);
-        setIsLoading(false);
-     }
+      await db.clearAllAudio();
+      updateUserData(getDefaultData());
+      setIsClearDataModalOpen(false);
   };
   
-  const handleUpdatePreloadedData = useCallback(async () => {
-    if (!user) return;
-    setIsLoading(true);
-
-    const defaultData = getDefaultData();
-    const newPreloadedPodcasts = defaultData.podcasts.filter((p: Podcast) => p.storage === 'preloaded');
-    const newPreloadedCollections = defaultData.collections;
-
-    const R2_DEV_HOST = 'pub-601404c314b24f2bb21b0d97c7cd0dfa.r2.dev';
-
-    // Preserve progress from existing preloaded podcasts by mapping URL to progress
-    const progressMap = new Map<string, { progress: number; isListened: boolean }>();
-    podcasts
-      .filter((p: Podcast) => p.storage === 'preloaded' || (p.url && p.url.includes(R2_DEV_HOST))) // Also catch legacy preloaded
-      .forEach((p: Podcast) => {
-        progressMap.set(p.url, { progress: p.progress, isListened: p.isListened });
-      });
-
-    const updatedPreloadedPodcasts = newPreloadedPodcasts.map((p: Podcast) => {
-      if (progressMap.has(p.url)) {
-        const savedProgress = progressMap.get(p.url)!;
-        return { ...p, progress: savedProgress.progress, isListened: savedProgress.isListened };
-      }
-      return p;
-    });
-
-    // Get user-uploaded podcasts to keep them
-    const userUploadedPodcasts = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
-    
-    // Combine lists: user's files + updated preloaded files
-    const finalPodcasts = [...userUploadedPodcasts, ...updatedPreloadedPodcasts];
-
-    // Update collections: add any new ones, but don't remove existing user-created collections
-    const existingCollectionIds = new Set(collections.map((c: Collection) => c.id));
-    const missingCollections = newPreloadedCollections.filter((c: Collection) => !existingCollectionIds.has(c.id));
-    const finalCollections = [...collections, ...missingCollections];
-
-    try {
-        await updateUserData({
-            collections: finalCollections,
-            podcasts: finalPodcasts
+  const handleUpdatePreloadedData = () => {
+    if (window.confirm("This will add new preloaded content and may reset progress on existing preloaded content if there are updates. Your uploaded files will not be affected. Continue?")) {
+        const defaultData = getDefaultData();
+        const localFiles = podcasts.filter((p: Podcast) => p.storage === 'indexeddb');
+        const updatedPodcasts = [...localFiles];
+        
+        defaultData.podcasts.forEach(dp => {
+            if (!podcasts.find((p: Podcast) => p.id === dp.id)) {
+                updatedPodcasts.push(dp);
+            }
         });
-        alert(`Successfully updated preloaded content. Your library is now up to date.`);
-    } catch (error) {
-        console.error("Failed to update preloaded data:", error);
-        alert("An error occurred while updating. Please try again.");
-    } finally {
-        setIsLoading(false);
-    }
-  }, [user, podcasts, collections, updateUserData]);
 
-    // --- NEW: Audio Control Functions ---
-  const handleSkip = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio || !currentPodcast) return;
-    const newTime = Math.max(0, Math.min(currentPodcast.duration || 0, audio.currentTime + seconds));
-    audio.currentTime = newTime;
-    setActivePlayerTime(newTime);
-    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
-    updatePodcastProgress(currentPodcast.id, newTime);
-  }, [currentPodcast, updatePodcastProgress]);
-  
-  const handleSeek = useCallback((newTime: number) => {
-    const audio = audioRef.current;
-    if (!audio || !currentPodcast) return;
-    audio.currentTime = newTime;
-    setActivePlayerTime(newTime);
-    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
-    updatePodcastProgress(currentPodcast.id, newTime);
-  }, [currentPodcast, updatePodcastProgress]);
+        const updatedCollections = [...collections];
+        defaultData.collections.forEach(dc => {
+            if (!collections.find((c: Collection) => c.id === dc.id)) {
+                updatedCollections.push(dc);
+            }
+        });
+        
+        setPodcasts(updatedPodcasts);
+        setCollections(updatedCollections);
+        alert("Preloaded data updated!");
+    }
+  };
 
-  // --- NEW: Audio Event Handlers ---
-  const handleAudioPlay = useCallback(() => { log('[Player Event] onPlay'); setIsPlaying(true); }, [log, setIsPlaying]);
-  const handleAudioPause = useCallback(() => { log('[Player Event] onPause'); setIsPlaying(false); }, [log, setIsPlaying]);
-  
-  const handleCanPlay = useCallback(() => {
-    log('[Player Event] onCanPlay.');
-    if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-    }
-    setIsPlaybackLoading(false);
-  }, [log]);
-  
-  const handleWaiting = useCallback(() => { log('[Player Event] onWaiting (buffering).'); setIsPlaybackLoading(true); }, [log]);
-  const handlePlaying = useCallback(() => { log('[Player Event] onPlaying.'); setIsPlaybackLoading(false); }, [log]);
-  
-  const handleTimeUpdate = useCallback(() => {
-    if (!audioRef.current || !currentPodcastId) return;
-    const currentTime = audioRef.current.currentTime;
-    setActivePlayerTime(currentTime);
-
-    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
-    progressUpdateDebounceRef.current = window.setTimeout(() => {
-      if(currentPodcastId) {
-        updatePodcastProgress(currentPodcastId, currentTime);
-      }
-    }, 1000);
-  }, [currentPodcastId, updatePodcastProgress, setActivePlayerTime]);
-
-  const handleLoadedMetadata = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentPodcast) return;
-    log(`[Player Event] onLoadedMetadata. Duration: ${audio.duration}`);
-    if (isFinite(currentPodcast.progress) && audio.currentTime !== currentPodcast.progress) {
-        audio.currentTime = currentPodcast.progress;
-        setActivePlayerTime(currentPodcast.progress);
-    }
-    if (!currentPodcast.duration || currentPodcast.duration === 0) {
-        updatePodcastDuration(currentPodcast.id, audio.duration);
-    }
-  }, [currentPodcast, log, updatePodcastDuration, setActivePlayerTime]);
-
-  const handleAudioEnded = useCallback(() => {
-    log(`[Player Event] onEnded for "${currentPodcast?.name}"`);
-    if (progressUpdateDebounceRef.current) clearTimeout(progressUpdateDebounceRef.current);
-    if (currentPodcast && currentPodcast.duration > 0) {
-        updatePodcastProgress(currentPodcast.id, currentPodcast.duration);
-    }
-    handlePlaybackEnd();
-  }, [currentPodcast, updatePodcastProgress, handlePlaybackEnd, log]);
-  
-  const handleAudioError = useCallback((e: React.SyntheticEvent<HTMLAudioElement, Event>) => {
-    if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-    }
-    const audio = e.currentTarget;
-    const error = audio.error;
-    if (error) {
-        log(`[Player Error] Code: ${error.code}, Message: ${error.message}`);
-        alert(`Error playing audio: ${error.message} (Code: ${error.code})`);
-    }
-    setIsPlaybackLoading(false);
-    setIsPlaying(false);
-  }, [log, setIsPlaying]);
-
-  useEffect(() => {
-    if(audioRef.current) {
-      audioRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate]);
-
-  if (!isAppReady || !isMinLoadTimeMet) {
+  // Render Logic
+  if (isAuthLoading || (user && isDataLoading)) {
     return <LoadingSpinner />;
   }
-  
-  if (!user) {
-    return (
-      <LanguageProvider language={'en'}>
-        <div className="text-brand-text min-h-screen">
-            <AuthForm />
-        </div>
-      </LanguageProvider>
-    );
-  }
 
-  if (status && user.email !== 'maxence.poskin@gmail.com') {
-    if (status === 'pending') {
-      return ( <LanguageProvider language={language || 'en'}><div className="text-brand-text min-h-screen flex items-center justify-center p-4"><div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md"><h1 className="text-2xl font-bold mb-4">Approval Pending</h1><p className="text-brand-text-secondary">Your account is awaiting approval from an administrator. You will be able to access the app once your request has been reviewed. Thank you for your patience.</p><button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button></div></div></LanguageProvider> );
-    }
-    if (status === 'denied') {
-      return ( <LanguageProvider language={language || 'en'}><div className="text-brand-text min-h-screen flex items-center justify-center p-4"><div className="text-center bg-brand-surface p-8 rounded-lg b-border b-shadow max-w-md"><h1 className="text-2xl font-bold mb-4">Access Denied</h1><p className="text-brand-text-secondary">Your account request has been denied. If you believe this is a mistake, please contact support.</p><button onClick={logout} className="mt-6 px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow hover:bg-brand-primary-hover">Logout</button></div></div></LanguageProvider> );
-    }
+  if (!user) {
+    return <LanguageProvider language={language || 'en'}><AuthForm /></LanguageProvider>;
+  }
+  
+  if (status === 'pending') {
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg p-4 text-center">
+            <h1 className="text-2xl font-bold text-brand-text mb-4">Request Sent</h1>
+            <p className="text-brand-text-secondary max-w-sm mb-6">Your request to access the app has been sent. Please wait for an administrator to approve it.</p>
+            <button onClick={logout} className="px-4 py-2 bg-brand-primary text-brand-text-on-primary rounded-md b-border b-shadow">Logout</button>
+        </div>
+    );
   }
   
   if (!hasCompletedOnboarding) {
     return (
-      <LanguageProvider language={language || 'en'}>
-        <div className="text-brand-text min-h-screen animate-fade-in">
-          <OnboardingModal isOpen={true} onComplete={handleOnboardingComplete} onImportData={(file) => handleImportData(file, handleOnboardingComplete)} />
-        </div>
-      </LanguageProvider>
+        <LanguageProvider language={language || 'en'}>
+            <OnboardingModal 
+                isOpen={true} 
+                onComplete={() => updateUserData({ hasCompletedOnboarding: true })}
+                onImportData={(file) => handleImportData(file, () => updateUserData({ hasCompletedOnboarding: true }))}
+            />
+        </LanguageProvider>
     );
   }
 
   return (
     <LanguageProvider language={language || 'en'}>
-        <div className="text-brand-text min-h-screen animate-fade-in">
-        {isDebugMode && <DebugOverlay />}
-        <audio ref={soundAudioRef} preload="auto" />
-        <audio
-          ref={audioRef}
-          onPlay={handleAudioPlay}
-          onPause={handleAudioPause}
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={handleAudioEnded}
-          onLoadedMetadata={handleLoadedMetadata}
-          onCanPlay={handleCanPlay}
-          onWaiting={handleWaiting}
-          onPlaying={handlePlaying}
-          onError={handleAudioError}
-          preload="auto"
-          crossOrigin="anonymous"
-        />
-        {showConfetti && <Confetti count={50} theme={theme} />}
-
-        <AppUI
-            user={user}
-            onLogout={logout}
-            onImportData={handleImportData}
-            podcasts={podcasts}
-            collections={collections}
-            title={title}
-            setTitle={(newTitle: string) => updateUserData({ title: newTitle })}
-            streakData={streakData}
-            isTodayComplete={isTodayComplete}
-            currentPodcastId={currentPodcastId}
-            currentPodcast={currentPodcast}
-            isPlaying={isPlaying}
-            isPlayerExpanded={isPlayerExpanded}
-            setIsPlayerExpanded={setIsPlayerExpanded}
-            customArtwork={customArtwork}
-            playbackRate={playbackRate}
-            setPlaybackRate={setPlaybackRate}
-            activePlayerTime={activePlayerTime}
-            isSettingsOpen={isSettingsOpen}
-            setIsSettingsOpen={setIsSettingsOpen}
-            hideCompleted={hideCompleted}
-            setHideCompleted={(value: boolean) => updateUserData({ hideCompleted: value })}
-            reviewModeEnabled={reviewModeEnabled}
-            setReviewModeEnabled={(value: boolean) => updateUserData({ reviewModeEnabled: value })}
-            completionSound={completionSound}
-            setCompletionSound={(sound: CompletionSound) => updateUserData({ completionSound: sound })}
-            useCollectionsView={useCollectionsView}
-            setUseCollectionsView={(value: boolean) => updateUserData({ useCollectionsView: value })}
-            playOnNavigate={playOnNavigate}
-            setPlayOnNavigate={(value: boolean) => updateUserData({ playOnNavigate: value })}
-            playerLayout={playerLayout}
-            setPlayerLayout={(layout: LayoutMode) => updateUserData({ playerLayout: layout })}
-            lastPlayedCollectionId={lastPlayedCollectionId}
-            setLastPlayedCollectionId={(id: string | null) => updateUserData({ lastPlayedCollectionId: id })}
-            handleSetCustomArtwork={handleSetCustomArtwork}
-            dataToExport={data}
-            theme={theme}
-            setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
-            setLanguage={(lang: Language) => updateUserData({ language: lang })}
-            setStreakData={handleSetStreakData}
-            setPodcasts={(newPodcasts: Podcast[]) => updateUserData({ podcasts: newPodcasts })}
-            setCollections={(newCollections: Collection[]) => updateUserData({ collections: newCollections })}
-            unrecordCompletion={unrecordCompletion}
-            recordCompletion={recordCompletion}
-            allPodcastsSorted={allPodcastsSorted}
-            podcastsInCurrentView={podcastsInCurrentView}
-            reviewPrompt={reviewPrompt}
-            setReviewPrompt={setReviewPrompt}
-            setNextPodcastOnEnd={setNextPodcastOnEnd}
-            isCategorizeModalOpen={isCategorizeModalOpen}
-            setIsCategorizeModalOpen={setIsCategorizeModalOpen}
-            podcastsToCategorize={podcastsToCategorize}
-            setPodcastsToCategorize={setPodcastsToCategorize}
-            isCreateCollectionModalOpen={isCreateCollectionModalOpen}
-            setIsCreateCollectionModalOpen={setIsCreateCollectionModalOpen}
-            currentView={currentView}
-            setCurrentView={setCurrentView}
-            isClearDataModalOpen={isClearDataModalOpen}
-            setIsClearDataModalOpen={setIsClearDataModalOpen}
-            isLoading={isLoading}
-            isPlaybackLoading={isPlaybackLoading}
-            onFileUpload={handleFileUpload}
-            onDeletePodcast={handleDeletePodcast}
-            onDeleteCollection={handleDeleteCollection}
-            // Fix: Corrected prop names to match the handler functions defined in this component.
-            onResetProgress={handleResetProgress}
-            onClearLocalFiles={handleClearLocalFiles}
-            onResetPreloaded={handleResetPreloaded}
-            onClearAll={handleClearAll}
-            onUpdatePreloadedData={handleUpdatePreloadedData}
-            totalStorageUsed={totalStorageUsed}
-            onSelectPodcast={handleSelectPodcast}
-            onTogglePlayPause={handleTogglePlayPause}
-            onSkip={handleSkip}
-            onSeek={handleSeek}
-            showPlaybackSpeedControl={showPlaybackSpeedControl}
-            setShowPlaybackSpeedControl={(value: boolean) => updateUserData({showPlaybackSpeedControl: value})}
-        />
-      </div>
+      {showConfetti && <Confetti count={50} theme={theme} />}
+      <AppUI
+        user={user}
+        onLogout={logout}
+        onImportData={handleImportData}
+        podcasts={podcasts}
+        collections={collections}
+        title={title}
+        setTitle={setTitle}
+        streakData={streakData}
+        isTodayComplete={isTodayComplete}
+        currentPodcastId={currentPodcastId}
+        currentPodcast={currentPodcast}
+        isPlaying={isPlaying}
+        isPlayerExpanded={isPlayerExpanded}
+        setIsPlayerExpanded={setIsPlayerExpanded}
+        customArtwork={customArtwork}
+        playbackRate={playbackRate}
+        setPlaybackRate={setPlaybackRate}
+        activePlayerTime={activePlayerTime}
+        isSettingsOpen={isSettingsOpen}
+        setIsSettingsOpen={setIsSettingsOpen}
+        hideCompleted={hideCompleted}
+        setHideCompleted={setHideCompleted}
+        reviewModeEnabled={reviewModeEnabled}
+        setReviewModeEnabled={setReviewModeEnabled}
+        completionSound={completionSound}
+        setCompletionSound={setCompletionSound}
+        useCollectionsView={useCollectionsView}
+        setUseCollectionsView={setUseCollectionsView}
+        playOnNavigate={playOnNavigate}
+        setPlayOnNavigate={setPlayOnNavigate}
+        playerLayout={playerLayout}
+        setPlayerLayout={setPlayerLayout}
+        lastPlayedCollectionId={lastPlayedCollectionId}
+        setLastPlayedCollectionId={setLastPlayedCollectionId}
+        handleSetCustomArtwork={handleSetCustomArtwork}
+        dataToExport={dataToExport}
+        theme={theme}
+        setTheme={(newTheme: Theme) => updateUserData({ theme: newTheme })}
+        setLanguage={setLanguage}
+        setStreakData={setStreakData}
+        setPodcasts={setPodcasts}
+        setCollections={setCollections}
+        unrecordCompletion={unrecordCompletion}
+        recordCompletion={recordCompletion}
+        allPodcastsSorted={allPodcastsSorted}
+        podcastsInCurrentView={podcastsInCurrentView}
+        reviewPrompt={reviewPrompt}
+        setReviewPrompt={setReviewPrompt}
+        setNextPodcastOnEnd={setNextPodcastOnEnd}
+        isCategorizeModalOpen={isCategorizeModalOpen}
+        setIsCategorizeModalOpen={setIsCategorizeModalOpen}
+        podcastsToCategorize={podcastsToCategorize}
+        setPodcastsToCategorize={setPodcastsToCategorize}
+        isCreateCollectionModalOpen={isCreateCollectionModalOpen}
+        setIsCreateCollectionModalOpen={setIsCreateCollectionModalOpen}
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        isClearDataModalOpen={isClearDataModalOpen}
+        setIsClearDataModalOpen={setIsClearDataModalOpen}
+        isLoading={isLoading}
+        isPlaybackLoading={isPlaybackLoading}
+        onFileUpload={handleFileUpload}
+        onDeletePodcast={handleDeletePodcast}
+        onDeleteCollection={handleDeleteCollection}
+        onResetProgress={handleResetProgress}
+        onClearLocalFiles={handleClearLocalFiles}
+        onResetPreloaded={handleResetPreloaded}
+        onClearAll={handleClearAll}
+        onUpdatePreloadedData={handleUpdatePreloadedData}
+        totalStorageUsed={totalStorageUsed}
+        onSelectPodcast={onSelectPodcast}
+        onTogglePlayPause={onTogglePlayPause}
+        onSkip={onSkip}
+        onSeek={onSeek}
+        showPlaybackSpeedControl={showPlaybackSpeedControl}
+        setShowPlaybackSpeedControl={setShowPlaybackSpeedControl}
+      />
+      {process.env.NODE_ENV === 'development' && <DebugOverlay />}
     </LanguageProvider>
   );
 }
