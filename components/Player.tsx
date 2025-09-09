@@ -48,20 +48,11 @@ const Player: React.FC<PlayerProps> = ({
   onSeek,
 }) => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
-  const [skipIndicator, setSkipIndicator] = useState<'forward' | 'backward' | null>(null);
-  const [indicatorKey, setIndicatorKey] = useState(0);
 
-  const handleTogglePlayPauseClick = useCallback((e: React.MouseEvent) => {
+  const handleTogglePlayPauseClick = (e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     onTogglePlayPause();
-  }, [onTogglePlayPause]);
-
-  useEffect(() => {
-    if (skipIndicator) {
-      const timer = setTimeout(() => setSkipIndicator(null), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [skipIndicator]);
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -79,10 +70,10 @@ const Player: React.FC<PlayerProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isPlayerExpanded, setIsPlayerExpanded, onTogglePlayPause]);
 
-  const handleSkipClick = useCallback((seconds: number, e?: React.MouseEvent | React.TouchEvent) => {
+  const handleSkipClick = (seconds: number, e?: React.MouseEvent | React.TouchEvent) => {
     e?.stopPropagation();
     onSkip(seconds);
-  }, [onSkip]);
+  };
 
   const handleSeekInternal = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -98,14 +89,6 @@ const Player: React.FC<PlayerProps> = ({
     const nextIndex = (currentIndex + 1) % PLAYBACK_RATES.length;
     onPlaybackRateChange(PLAYBACK_RATES[nextIndex]);
   }, [playbackRate, onPlaybackRateChange]);
-  
-  const handleArtworkTap = (direction: 'forward' | 'backward', e: React.MouseEvent) => {
-    e.stopPropagation();
-    const seconds = direction === 'forward' ? 10 : -10;
-    onSkip(seconds);
-    setSkipIndicator(direction);
-    setIndicatorKey(prev => prev + 1); // Reset animation
-  };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => { e.preventDefault(); };
 
@@ -124,7 +107,7 @@ const Player: React.FC<PlayerProps> = ({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <h3 className="text-4xl font-bold text-brand-text mb-2">{formatTime((podcast.duration || 0) - currentTime)}</h3>
-            <button onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
+            <button onTouchEnd={handleTogglePlayPauseClick} onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
               {isLoading ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -136,15 +119,15 @@ const Player: React.FC<PlayerProps> = ({
         </div>
         <h2 className="text-2xl font-bold text-brand-text mt-4 px-4">{podcast.name}</h2>
         <div className="flex items-center justify-center gap-2 w-full max-w-sm" data-no-drag="true">
-          <button onClick={(e) => handleSkipClick(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+          <button onClick={(e) => handleSkipClick(-10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
           {showPlaybackSpeedControl && (
-            <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-3 rounded-md w-24 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
+            <button onClick={handleCycleSpeed} onTouchEnd={e => e.stopPropagation()} className="text-brand-text font-semibold p-3 rounded-md w-24 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
               {playbackRate}x
             </button>
           )}
-          <button onClick={(e) => handleSkipClick(10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+          <button onClick={(e) => handleSkipClick(10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="forward" />
           </button>
         </div>
@@ -158,18 +141,14 @@ const Player: React.FC<PlayerProps> = ({
         <div className={`relative w-48 h-48 sm:w-64 sm:h-64 bg-brand-surface rounded-lg shadow-2xl overflow-hidden b-border b-shadow transition-transform ${isPlaying && !isLoading ? 'animate-pulse-slow' : ''}`}>
           <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
           
-           {/* Tap-to-seek overlays */}
-          <div className="absolute inset-0 flex" data-no-drag="true">
-              <div className="w-1/3 h-full cursor-pointer" onClick={(e) => handleArtworkTap('backward', e)} role="button" aria-label="Skip backward 10 seconds" />
-              <div className="w-1/3 h-full cursor-pointer" onClick={(e) => { e.stopPropagation(); onTogglePlayPause(); }} role="button" aria-label={isPlaying ? 'Pause' : 'Play'}/>
-              <div className="w-1/3 h-full cursor-pointer" onClick={(e) => handleArtworkTap('forward', e)} role="button" aria-label="Skip forward 10 seconds" />
-          </div>
-
-          {/* Skip indicator animation */}
-          <div className={`absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none transition-opacity duration-300 ${skipIndicator ? 'opacity-100' : 'opacity-0'}`}>
-              {skipIndicator === 'backward' && <RedoIcon key={indicatorKey} size={48} className="text-white -scale-x-100 animate-skip-indicator" />}
-              {skipIndicator === 'forward' && <RedoIcon key={indicatorKey} size={48} className="text-white animate-skip-indicator" />}
-          </div>
+           {/* Tap-to-play/pause overlay */}
+          <div 
+            className="absolute inset-0 cursor-pointer" 
+            data-no-drag="true" 
+            onClick={(e) => { e.stopPropagation(); onTogglePlayPause(); }} 
+            role="button" 
+            aria-label={isPlaying ? 'Pause' : 'Play'} 
+          />
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-brand-text">{podcast.name}</h2>
         <div className="w-full max-w-md px-4 sm:px-0" data-no-drag="true">
@@ -183,14 +162,14 @@ const Player: React.FC<PlayerProps> = ({
         </div>
         <div className="flex items-center justify-center gap-2 w-full max-w-sm" data-no-drag="true">
           {showPlaybackSpeedControl && (
-            <button onClick={handleCycleSpeed} onTouchStart={e => e.stopPropagation()} className="text-brand-text font-semibold p-2 rounded-md w-16 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
+            <button onClick={handleCycleSpeed} onTouchEnd={e => e.stopPropagation()} className="text-brand-text font-semibold p-2 rounded-md w-16 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
               {playbackRate}x
             </button>
           )}
-          <button onClick={(e) => handleSkipClick(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+          <button onClick={(e) => handleSkipClick(-10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
-          <button onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
+          <button onClick={handleTogglePlayPauseClick} onTouchEnd={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
              {isLoading ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -198,7 +177,7 @@ const Player: React.FC<PlayerProps> = ({
                 </svg>
               ) : isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
           </button>
-          <button onClick={(e) => handleSkipClick(10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+          <button onClick={(e) => handleSkipClick(10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="forward" />
           </button>
           {showPlaybackSpeedControl && (
@@ -216,16 +195,16 @@ const Player: React.FC<PlayerProps> = ({
             {layoutMode === 'pimsleur' && artworkUrl && <img src={artworkUrl} alt="" className="absolute inset-0 w-full h-full object-cover -z-20 opacity-20" />}
             
             <div className="flex-shrink-0 flex justify-between items-center">
-                <button onClick={() => setIsPlayerExpanded(false)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
+                <button onClick={() => setIsPlayerExpanded(false)} onTouchEnd={e => {e.stopPropagation(); setIsPlayerExpanded(false)}} className="text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
                 <ChevronDownIcon size={32} />
                 </button>
-                <button onClick={() => setIsSettingsMenuOpen(true)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 -mr-2">
+                <button onClick={() => setIsSettingsMenuOpen(true)} onTouchEnd={e => {e.stopPropagation(); setIsSettingsMenuOpen(true)}} className="text-brand-text-secondary hover:text-brand-text p-2 -mr-2">
                 <SettingsIcon size={28} />
                 </button>
             </div>
 
             {isSettingsMenuOpen && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20 animate-fade-in" onClick={() => setIsSettingsMenuOpen(false)} onTouchStart={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20 animate-fade-in" onClick={() => setIsSettingsMenuOpen(false)} onTouchEnd={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
                     <div className="bg-brand-surface rounded-lg p-6 w-full max-w-xs b-border b-shadow animate-scale-in" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-bold text-brand-text">Player Settings</h3>
@@ -261,10 +240,10 @@ const Player: React.FC<PlayerProps> = ({
                 <p className="text-xs text-brand-text-secondary">{formatTime(currentTime)} / {formatTime(podcast.duration || 0)}</p>
                 </div>
                 <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2">
-                    <button onClick={(e) => handleSkipClick(-10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+                    <button onClick={(e) => handleSkipClick(-10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
                         <RedoIcon size={20} className="backward -scale-x-100" />
                     </button>
-                    <button onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
+                    <button onClick={handleTogglePlayPauseClick} onTouchEnd={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
                         {isLoading ? (
                         <svg className="animate-spin h-5 w-5 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -272,7 +251,7 @@ const Player: React.FC<PlayerProps> = ({
                         </svg>
                         ) : isPlaying ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
                     </button>
-                    <button onClick={(e) => handleSkipClick(10, e)} onTouchStart={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+                    <button onClick={(e) => handleSkipClick(10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
                         <RedoIcon size={20} className="forward" />
                     </button>
                 </div>
