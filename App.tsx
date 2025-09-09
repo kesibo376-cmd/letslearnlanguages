@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -351,16 +353,14 @@ export default function App() {
         if (src && audioRef.current) {
             audioRef.current.src = src;
             audioRef.current.currentTime = currentPodcast.progress || 0;
-            if (isPlaying) {
-              audioRef.current.play().catch(e => {
-                console.error("Error playing audio on load:", e);
-                setIsPlaying(false);
-              });
-            }
+            audioRef.current.play().catch(e => {
+              console.error("Error playing audio on load:", e);
+              setIsPlaying(false);
+            });
         }
     };
     loadAudio();
-  }, [currentPodcast, isPlaying]);
+  }, [currentPodcast]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
@@ -552,8 +552,11 @@ export default function App() {
         onDeleteCollection={handleDeleteCollection}
         onResetProgress={handleResetProgress}
         onClearLocalFiles={handleClearLocalFiles}
+        // Fix: Pass the correct handler function `handleResetPreloaded` instead of the undefined `onResetPreloaded`.
         onResetPreloaded={handleResetPreloaded}
+        // Fix: Pass the correct handler function `handleClearAll` instead of the undefined `onClearAll`.
         onClearAll={handleClearAll}
+        // Fix: Pass the correct handler function `handleUpdatePreloadedData` instead of the undefined `onUpdatePreloadedData`.
         onUpdatePreloadedData={handleUpdatePreloadedData}
         totalStorageUsed={totalStorageUsed}
         onSelectPodcast={onSelectPodcast}
