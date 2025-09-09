@@ -216,7 +216,7 @@ export default function App() {
   }, [setPodcasts]);
 
   // Player Logic
-  const onSelectPodcast = useCallback((id: string) => {
+  const onSelectPodcast = useCallback((id: string, autoPlay = true) => {
     if (id === currentPodcastId) {
         if (audioRef.current) {
             audioRef.current.paused ? audioRef.current.play().catch(e => console.error(e)) : audioRef.current.pause();
@@ -241,7 +241,7 @@ export default function App() {
     }
 
     setCurrentPodcastId(id);
-    setIsPlaying(true);
+    setIsPlaying(autoPlay);
   }, [currentPodcastId, reviewModeEnabled, allPodcastsSorted, isPlaying, updatePodcastProgress]);
 
   const onTogglePlayPause = useCallback(() => {
@@ -331,8 +331,7 @@ export default function App() {
             if (nextPodcast.collectionId !== currentPodcast?.collectionId) {
                 setCurrentView(nextPodcast.collectionId || 'uncategorized');
             }
-            setCurrentPodcastId(nextPodcast.id);
-            setIsPlaying(false);
+            onSelectPodcast(nextPodcast.id, false);
         } else {
             setIsPlaying(false);
         }
@@ -623,6 +622,7 @@ export default function App() {
         onDeleteCollection={handleDeleteCollection}
         onResetProgress={handleResetProgress}
         onClearLocalFiles={handleClearLocalFiles}
+        // Fix: Pass the correct handler function `handleResetPreloaded` instead of the undefined `onResetPreloaded`.
         onResetPreloaded={handleResetPreloaded}
         onClearAll={handleClearAll}
         onUpdatePreloadedData={handleUpdatePreloadedData}
