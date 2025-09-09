@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -250,6 +247,7 @@ export default function App() {
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
+      audioRef.current.preload = 'auto';
     }
     const audio = audioRef.current;
     
@@ -336,30 +334,58 @@ export default function App() {
   }, [currentPodcastId, podcasts, recordCompletion, streakData.enabled, streakData.difficulty, completionSound, allPodcastsSorted, nextPodcastOnEnd, podcastsInCurrentView, currentPodcast?.collectionId]);
 
   useEffect(() => {
+    // Keep track of the current object URL to revoke it on cleanup
+    let objectUrl: string | null = null;
+
     const loadAudio = async () => {
         if (!currentPodcast || !audioRef.current) return;
         
         setIsPlaybackLoading(true);
-        let src = '';
-        if (currentPodcast.storage === 'indexeddb') {
-            const audioBlob = await db.getAudio(currentPodcast.id);
-            if (audioBlob) {
-                src = URL.createObjectURL(audioBlob);
+        
+        try {
+            let src = '';
+            if (currentPodcast.storage === 'indexeddb') {
+                const audioBlob = await db.getAudio(currentPodcast.id);
+                if (audioBlob) {
+                    objectUrl = URL.createObjectURL(audioBlob);
+                    src = objectUrl;
+                } else {
+                    throw new Error(`Audio blob not found for ID: ${currentPodcast.id}`);
+                }
+            } else { // This handles 'preloaded' storage by fetching the entire file
+                const response = await fetch(currentPodcast.url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const audioBlob = await response.blob();
+                objectUrl = URL.createObjectURL(audioBlob);
+                src = objectUrl;
             }
-        } else {
-            src = currentPodcast.url;
-        }
 
-        if (src && audioRef.current) {
-            audioRef.current.src = src;
-            audioRef.current.currentTime = currentPodcast.progress || 0;
-            audioRef.current.play().catch(e => {
-              console.error("Error playing audio on load:", e);
-              setIsPlaying(false);
-            });
+            if (src && audioRef.current) {
+                audioRef.current.src = src;
+                audioRef.current.currentTime = currentPodcast.progress || 0;
+                audioRef.current.play().catch(e => {
+                  console.error("Error playing audio on load:", e);
+                  setIsPlaying(false);
+                });
+            } else {
+                // If src wasn't created, stop loading
+                setIsPlaybackLoading(false);
+            }
+        } catch (error) {
+            console.error("Error loading audio:", error);
+            setIsPlaybackLoading(false);
+            // Optionally, inform the user that the audio failed to load
         }
     };
+
     loadAudio();
+
+    return () => {
+      // Cleanup: Revoke the object URL to avoid memory leaks
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [currentPodcast]);
 
   useEffect(() => {
