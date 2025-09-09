@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { Podcast, LayoutMode } from '../types';
 import { formatTime } from '../lib/utils';
 import PlayIcon from './icons/PlayIcon';
@@ -49,7 +49,7 @@ const Player: React.FC<PlayerProps> = ({
 }) => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
 
-  const handleTogglePlayPauseClick = (e: React.MouseEvent | React.TouchEvent) => {
+  const handleTogglePlayPauseClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onTogglePlayPause();
   };
@@ -70,7 +70,7 @@ const Player: React.FC<PlayerProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isPlayerExpanded, setIsPlayerExpanded, onTogglePlayPause]);
 
-  const handleSkipClick = (seconds: number, e?: React.MouseEvent | React.TouchEvent) => {
+  const handleSkipClick = (seconds: number, e?: React.MouseEvent) => {
     e?.stopPropagation();
     onSkip(seconds);
   };
@@ -83,7 +83,7 @@ const Player: React.FC<PlayerProps> = ({
     onSeek(newTime);
   }, [podcast.duration, onSeek]);
 
-  const handleCycleSpeed = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handleCycleSpeed = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     const currentIndex = PLAYBACK_RATES.indexOf(playbackRate);
     const nextIndex = (currentIndex + 1) % PLAYBACK_RATES.length;
@@ -107,7 +107,7 @@ const Player: React.FC<PlayerProps> = ({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <h3 className="text-4xl font-bold text-brand-text mb-2">{formatTime((podcast.duration || 0) - currentTime)}</h3>
-            <button onTouchEnd={handleTogglePlayPauseClick} onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
+            <button onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 b-border b-shadow hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center">
               {isLoading ? (
                 <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -119,15 +119,15 @@ const Player: React.FC<PlayerProps> = ({
         </div>
         <h2 className="text-2xl font-bold text-brand-text mt-4 px-4">{podcast.name}</h2>
         <div className="flex items-center justify-center gap-2 w-full max-w-sm" data-no-drag="true">
-          <button onClick={(e) => handleSkipClick(-10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+          <button onClick={(e) => handleSkipClick(-10, e)} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="backward -scale-x-100" />
           </button>
           {showPlaybackSpeedControl && (
-            <button onClick={handleCycleSpeed} onTouchEnd={e => e.stopPropagation()} className="text-brand-text font-semibold p-3 rounded-md w-24 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
+            <button onClick={handleCycleSpeed} className="text-brand-text font-semibold p-3 rounded-md w-24 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
               {playbackRate}x
             </button>
           )}
-          <button onClick={(e) => handleSkipClick(10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+          <button onClick={(e) => handleSkipClick(10, e)} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
             <RedoIcon size={24} className="forward" />
           </button>
         </div>
@@ -140,9 +140,7 @@ const Player: React.FC<PlayerProps> = ({
       <div className="flex-grow flex flex-col items-center justify-center text-center gap-4 sm:gap-6">
         <div className={`relative w-48 h-48 sm:w-64 sm:h-64 bg-brand-surface rounded-lg shadow-2xl overflow-hidden b-border b-shadow transition-transform ${isPlaying && !isLoading ? 'animate-pulse-slow' : ''}`}>
           <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
-          
-           {/* Tap-to-play/pause overlay */}
-          <div 
+           <div 
             className="absolute inset-0 cursor-pointer" 
             data-no-drag="true" 
             onClick={(e) => { e.stopPropagation(); onTogglePlayPause(); }} 
@@ -160,104 +158,126 @@ const Player: React.FC<PlayerProps> = ({
             <span>{formatTime(podcast.duration || 0)}</span>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-2 w-full max-w-sm" data-no-drag="true">
-          {showPlaybackSpeedControl && (
-            <button onClick={handleCycleSpeed} onTouchEnd={e => e.stopPropagation()} className="text-brand-text font-semibold p-2 rounded-md w-16 text-center bg-brand-surface hover:bg-brand-surface-light transition-colors b-border transform hover:scale-105 active:scale-95">
-              {playbackRate}x
-            </button>
-          )}
-          <button onClick={(e) => handleSkipClick(-10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
-            <RedoIcon size={24} className="backward -scale-x-100" />
+        <div className="flex items-center justify-around w-full max-w-xs" data-no-drag="true">
+          <button onClick={(e) => handleSkipClick(-10, e)} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+            <RedoIcon size={28} className="backward -scale-x-100" />
           </button>
-          <button onClick={handleTogglePlayPauseClick} onTouchEnd={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 b-border b-shadow flex items-center justify-center">
-             {isLoading ? (
-                <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
+          <button onClick={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-5 z-10 hover:bg-brand-primary-hover transition-transform transform active:scale-95 sm:scale-100 scale-110 flex items-center justify-center b-border b-shadow">
+            {isLoading ? (
+              <svg className="animate-spin h-8 w-8 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : isPlaying ? <PauseIcon size={32} /> : <PlayIcon size={32} />}
           </button>
-          <button onClick={(e) => handleSkipClick(10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
-            <RedoIcon size={24} className="forward" />
+          <button onClick={(e) => handleSkipClick(10, e)} className="text-brand-text-secondary hover:text-brand-text p-4 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
+            <RedoIcon size={28} className="forward" />
           </button>
-          {showPlaybackSpeedControl && (
-            <div className="w-16" aria-hidden="true" />
-          )}
         </div>
       </div>
     );
   };
-
+  
   return (
-    <div className={`fixed left-0 right-0 z-20 transition-all duration-500 ease-in-out ${isPlayerExpanded ? 'bottom-0 top-0' : 'bottom-0'}`}>
-        <div className={`absolute inset-0 flex flex-col p-4 sm:p-8 transition-transform duration-300 ease-in-out ${isPlayerExpanded ? 'translate-y-0' : 'translate-y-full pointer-events-none'}`} onTouchMove={handleTouchMove}>
-            <div className="absolute inset-0 -z-10 animated-player-bg" style={animatedBackgroundStyle} />
-            {layoutMode === 'pimsleur' && artworkUrl && <img src={artworkUrl} alt="" className="absolute inset-0 w-full h-full object-cover -z-20 opacity-20" />}
-            
-            <div className="flex-shrink-0 flex justify-between items-center">
-                <button onClick={() => setIsPlayerExpanded(false)} onTouchEnd={e => {e.stopPropagation(); setIsPlayerExpanded(false)}} className="text-brand-text-secondary hover:text-brand-text p-2 -ml-2">
-                <ChevronDownIcon size={32} />
-                </button>
-                <button onClick={() => setIsSettingsMenuOpen(true)} onTouchEnd={e => {e.stopPropagation(); setIsSettingsMenuOpen(true)}} className="text-brand-text-secondary hover:text-brand-text p-2 -mr-2">
-                <SettingsIcon size={28} />
-                </button>
+    <>
+      {/* Mini Player */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-20 transition-transform duration-500 ease-in-out ${
+          isPlayerExpanded ? 'translate-y-full' : 'translate-y-0'
+        }`}
+        style={{
+            visibility: isPlayerExpanded ? 'hidden' : 'visible',
+            transition: isPlayerExpanded ? 'transform 0.5s, visibility 0s 0.5s' : 'transform 0.5s'
+        }}
+      >
+        <div 
+            className="max-w-4xl mx-auto bg-brand-surface p-2 rounded-t-lg cursor-pointer b-border-t b-border-l b-border-r b-shadow"
+            onClick={() => setIsPlayerExpanded(true)}
+            role="button"
+            aria-label="Expand player"
+        >
+          <div className="absolute top-0 left-0 h-1 bg-brand-surface w-full">
+            <div className="h-full bg-brand-primary" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 flex-shrink-0 bg-brand-surface-light rounded-md overflow-hidden b-border">
+              <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
             </div>
-
-            {isSettingsMenuOpen && (
-                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20 animate-fade-in" onClick={() => setIsSettingsMenuOpen(false)} onTouchEnd={e => e.stopPropagation()} onTouchMove={e => e.stopPropagation()}>
-                    <div className="bg-brand-surface rounded-lg p-6 w-full max-w-xs b-border b-shadow animate-scale-in" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-brand-text">Player Settings</h3>
-                            <button onClick={() => setIsSettingsMenuOpen(false)} className="text-brand-text-secondary hover:text-brand-text text-2xl leading-none">&times;</button>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-                                <label className="font-semibold text-brand-text">Circular Player</label>
-                                <ToggleSwitch isOn={layoutMode === 'pimsleur'} handleToggle={() => setPlayerLayout(layoutMode === 'pimsleur' ? 'default' : 'pimsleur')} />
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-brand-surface-light rounded-md b-border">
-                                <label className="font-semibold text-brand-text">Show Speed Control</label>
-                                <ToggleSwitch isOn={showPlaybackSpeedControl} handleToggle={() => setShowPlaybackSpeedControl(!showPlaybackSpeedControl)} />
-                            </div>
-                        </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-brand-text truncate">{podcast.name}</p>
+              <p className="text-xs text-brand-text-secondary">{formatTime(currentTime)} / {formatTime(podcast.duration || 0)}</p>
+            </div>
+            <button onClick={handleTogglePlayPauseClick} className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-brand-primary text-brand-text-on-primary rounded-full b-border b-shadow hover:bg-brand-primary-hover transition-transform transform hover:scale-105 active:scale-95">
+              {isLoading ? (
+                <svg className="animate-spin h-6 w-6 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+              ) : isPlaying ? <PauseIcon size={24}/> : <PlayIcon size={24}/>}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Expanded Player */}
+      <div
+        className={`fixed inset-0 bg-brand-bg z-30 flex flex-col transition-all duration-500 ease-in-out ${
+          isPlayerExpanded
+            ? 'transform-none opacity-100'
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+        style={isPlayerExpanded ? animatedBackgroundStyle : {}}
+        onTouchMove={handleTouchMove}
+      >
+        <div className="flex-grow flex flex-col p-4 sm:p-6 w-full h-full">
+          <div className="flex-shrink-0 flex items-center justify-between" data-no-drag="true">
+            <button
+              onClick={() => setIsPlayerExpanded(false)}
+              className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full"
+              aria-label="Collapse player"
+            >
+              <ChevronDownIcon size={28} />
+            </button>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-brand-text-secondary uppercase tracking-wider">{layoutMode === 'pimsleur' ? 'Pimsleur Mode' : 'Now Playing'}</p>
+            </div>
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsSettingsMenuOpen(p => !p); }}
+                className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full"
+                aria-label="Player settings"
+              >
+                <SettingsIcon size={24} />
+              </button>
+              {isSettingsMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-brand-surface-light rounded-md shadow-lg z-10 b-border animate-scale-in origin-top-right" onTouchStart={(e) => e.stopPropagation()}>
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-brand-text text-sm">Pimsleur Mode</label>
+                      <ToggleSwitch isOn={layoutMode === 'pimsleur'} handleToggle={() => setPlayerLayout(layoutMode === 'pimsleur' ? 'default' : 'pimsleur')} />
                     </div>
+                    <div className="flex items-center justify-between">
+                      <label className="font-semibold text-brand-text text-sm">Speed Control</label>
+                      <ToggleSwitch isOn={showPlaybackSpeedControl} handleToggle={() => setShowPlaybackSpeedControl(!showPlaybackSpeedControl)} />
+                    </div>
+                     {showPlaybackSpeedControl && (
+                        <div className="flex items-center justify-between pt-2 border-t border-brand-surface">
+                            <label className="font-semibold text-brand-text text-sm">Playback Speed</label>
+                            <button onClick={handleCycleSpeed} className="text-brand-text font-semibold p-2 rounded-md w-20 text-center bg-brand-surface hover:bg-opacity-75 transition-colors b-border">
+                                {playbackRate}x
+                            </button>
+                        </div>
+                    )}
+                  </div>
                 </div>
-            )}
-
-            {layoutMode === 'pimsleur' ? <PimsleurCircularPlayer /> : <DefaultExpandedPlayer />}
-        </div>
-        
-        <div className={`absolute bottom-0 left-0 right-0 bg-brand-surface-light shadow-2xl transition-transform duration-500 ease-in-out cursor-pointer b-border ${isPlayerExpanded ? 'translate-y-full' : 'translate-y-0'}`} onClick={() => setIsPlayerExpanded(true)} role="button" aria-label="Expand player">
-            <div className="absolute top-0 left-0 w-full h-1 bg-brand-surface">
-                <div className="bg-brand-primary h-full" style={{ width: `${progressPercent}%`, transition: 'width 0.2s linear' }} />
+              )}
             </div>
-            <div className="max-w-4xl mx-auto flex items-center gap-3 p-2 sm:p-3">
-                <div className="w-12 h-12 flex-shrink-0 bg-brand-surface rounded-md overflow-hidden b-border">
-                <img src={artworkUrl || 'https://i.imgur.com/Q3QfWqV.png'} alt={`Artwork for ${podcast.name}`} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-grow min-w-0">
-                <p className="font-bold text-brand-text truncate">{podcast.name}</p>
-                <p className="text-xs text-brand-text-secondary">{formatTime(currentTime)} / {formatTime(podcast.duration || 0)}</p>
-                </div>
-                <div className="flex-shrink-0 flex items-center gap-1 sm:gap-2">
-                    <button onClick={(e) => handleSkipClick(-10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
-                        <RedoIcon size={20} className="backward -scale-x-100" />
-                    </button>
-                    <button onClick={handleTogglePlayPauseClick} onTouchEnd={handleTogglePlayPauseClick} className="bg-brand-primary text-brand-text-on-primary rounded-full p-2 hover:bg-brand-primary-hover transition-transform transform active:scale-95 b-border b-shadow w-9 h-9 flex items-center justify-center">
-                        {isLoading ? (
-                        <svg className="animate-spin h-5 w-5 text-brand-text-on-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        ) : isPlaying ? <PauseIcon size={20} /> : <PlayIcon size={20} />}
-                    </button>
-                    <button onClick={(e) => handleSkipClick(10, e)} onTouchEnd={e => e.stopPropagation()} className="text-brand-text-secondary hover:text-brand-text p-2 rounded-full text-sm transform transition-transform hover:scale-110 active:scale-95">
-                        <RedoIcon size={20} className="forward" />
-                    </button>
-                </div>
-            </div>
+          </div>
+          
+          {layoutMode === 'pimsleur' ? <PimsleurCircularPlayer /> : <DefaultExpandedPlayer />}
         </div>
-    </div>
+      </div>
+    </>
   );
 };
 
