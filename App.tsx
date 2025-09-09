@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -326,7 +327,12 @@ export default function App() {
 
         const currentIndex = podcastsInCurrentView.findIndex(p => p.id === currentPodcastId);
         if (currentIndex > -1 && currentIndex < podcastsInCurrentView.length - 1) {
-            playNext(podcastsInCurrentView[currentIndex + 1].id);
+            const nextPodcast = podcastsInCurrentView[currentIndex + 1];
+            if (nextPodcast.collectionId !== currentPodcast?.collectionId) {
+                setCurrentView(nextPodcast.collectionId || 'uncategorized');
+            }
+            setCurrentPodcastId(nextPodcast.id);
+            setIsPlaying(false);
         } else {
             setIsPlaying(false);
         }
@@ -402,10 +408,12 @@ export default function App() {
             if (audioSrc && audioRef.current) {
                 audioRef.current.src = audioSrc;
                 audioRef.current.currentTime = podcastToLoad.progress || 0;
-                audioRef.current.play().catch(e => {
-                  console.error("Error playing audio on load:", e);
-                  setIsPlaying(false);
-                });
+                if (isPlaying) {
+                  audioRef.current.play().catch(e => {
+                    console.error("Error playing audio on load:", e);
+                    setIsPlaying(false);
+                  });
+                }
             } else {
                 setIsPlaybackLoading(false);
             }
