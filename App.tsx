@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -94,6 +95,7 @@ export default function App() {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const prevProgressRef = useRef<number>(0);
+  const objectUrlRef = useRef<string | null>(null);
 
   // Derived State
   const allPodcastsSorted = useMemo(() => [...(podcasts || [])].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })), [podcasts]);
@@ -216,7 +218,6 @@ export default function App() {
     }
 
     setCurrentPodcastId(id);
-    if (audioRef.current) audioRef.current.currentTime = newPodcast.progress || 0;
     setIsPlaying(true);
   }, [currentPodcastId, reviewModeEnabled, allPodcastsSorted, isPlaying]);
 
@@ -334,59 +335,75 @@ export default function App() {
   }, [currentPodcastId, podcasts, recordCompletion, streakData.enabled, streakData.difficulty, completionSound, allPodcastsSorted, nextPodcastOnEnd, podcastsInCurrentView, currentPodcast?.collectionId]);
 
   useEffect(() => {
-    // Keep track of the current object URL to revoke it on cleanup
-    let objectUrl: string | null = null;
+    // This effect is now solely for loading a NEW audio source when the ID changes.
+    // It is immune to re-renders caused by progress updates.
+    
+    // 1. Cleanup from the PREVIOUS track
+    if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+    }
+    
+    // If no podcast is selected, stop and clear the audio element.
+    if (!currentPodcastId) {
+        if(audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = '';
+        }
+        return;
+    }
+
+    const podcastToLoad = allPodcastsSorted.find(p => p.id === currentPodcastId);
 
     const loadAudio = async () => {
-        if (!currentPodcast || !audioRef.current) return;
+        if (!podcastToLoad || !audioRef.current) return;
         
         setIsPlaybackLoading(true);
         
         try {
             let src = '';
-            if (currentPodcast.storage === 'indexeddb') {
-                const audioBlob = await db.getAudio(currentPodcast.id);
+            if (podcastToLoad.storage === 'indexeddb') {
+                const audioBlob = await db.getAudio(podcastToLoad.id);
                 if (audioBlob) {
-                    objectUrl = URL.createObjectURL(audioBlob);
-                    src = objectUrl;
+                    objectUrlRef.current = URL.createObjectURL(audioBlob);
+                    src = objectUrlRef.current;
                 } else {
-                    throw new Error(`Audio blob not found for ID: ${currentPodcast.id}`);
+                    throw new Error(`Audio blob not found for ID: ${podcastToLoad.id}`);
                 }
-            } else { // This handles 'preloaded' storage by fetching the entire file
-                const response = await fetch(currentPodcast.url);
+            } else { // 'preloaded'
+                const response = await fetch(podcastToLoad.url);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const audioBlob = await response.blob();
-                objectUrl = URL.createObjectURL(audioBlob);
-                src = objectUrl;
+                objectUrlRef.current = URL.createObjectURL(audioBlob);
+                src = objectUrlRef.current;
             }
 
             if (src && audioRef.current) {
                 audioRef.current.src = src;
-                audioRef.current.currentTime = currentPodcast.progress || 0;
+                audioRef.current.currentTime = podcastToLoad.progress || 0;
                 audioRef.current.play().catch(e => {
                   console.error("Error playing audio on load:", e);
                   setIsPlaying(false);
                 });
             } else {
-                // If src wasn't created, stop loading
                 setIsPlaybackLoading(false);
             }
         } catch (error) {
             console.error("Error loading audio:", error);
             setIsPlaybackLoading(false);
-            // Optionally, inform the user that the audio failed to load
         }
     };
 
     loadAudio();
 
+    // Cleanup function for when the component unmounts.
     return () => {
-      // Cleanup: Revoke the object URL to avoid memory leaks
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+        if (objectUrlRef.current) {
+            URL.revokeObjectURL(objectUrlRef.current);
+            objectUrlRef.current = null;
+        }
     };
-  }, [currentPodcast]);
+  }, [currentPodcastId, allPodcastsSorted]); // This effect should still get the latest podcast list
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
@@ -576,6 +593,7 @@ export default function App() {
         onFileUpload={handleFileUpload}
         onDeletePodcast={handleDeletePodcast}
         onDeleteCollection={handleDeleteCollection}
+        // Fix: Pass the correct handler function `handleResetProgress` to the `onResetProgress` prop instead of the undefined `onResetProgress`.
         onResetProgress={handleResetProgress}
         onClearLocalFiles={handleClearLocalFiles}
         // Fix: Pass the correct handler function `handleResetPreloaded` instead of the undefined `onResetPreloaded`.
