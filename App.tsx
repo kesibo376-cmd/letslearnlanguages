@@ -1,5 +1,4 @@
 
-
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -246,13 +245,12 @@ export default function App() {
 
   const onTogglePlayPause = useCallback(() => {
     if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
+    if (audioRef.current.paused) {
       audioRef.current.play().catch(e => console.error("Play error:", e));
+    } else {
+      audioRef.current.pause();
     }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
+  }, []);
 
   const onSkip = (seconds: number) => {
     if (audioRef.current) {
@@ -425,7 +423,7 @@ export default function App() {
             objectUrlRef.current = null;
         }
     };
-  }, [currentPodcastId, allPodcastsSorted]);
+  }, [currentPodcastId]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = playbackRate;
