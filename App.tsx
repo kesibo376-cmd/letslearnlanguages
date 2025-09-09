@@ -1,4 +1,5 @@
 
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Podcast, CompletionSound, Collection, StreakData, StreakDifficulty, Theme, LayoutMode, Language } from './types';
 import { useTheme } from './hooks/useTheme';
@@ -229,7 +230,6 @@ export default function App() {
     if (!audioContextRef.current && audio) {
       try {
         const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-        // Create a source node from the existing <audio> element.
         const source = context.createMediaElementSource(audio);
         source.connect(context.destination);
         audioContextRef.current = context;
@@ -237,7 +237,6 @@ export default function App() {
         log('[AudioContext] Initialized successfully on user gesture.');
       } catch (e) {
         log(`[AudioContext Error] Could not create AudioContext: ${e instanceof Error ? e.message : String(e)}`);
-        // If context fails to initialize, we can't perform the fix. The app will fallback to default browser behavior.
       }
     }
 
@@ -245,17 +244,11 @@ export default function App() {
 
     if (audio.paused) {
       const playAudio = () => {
-        const targetTime = activePlayerTime;
-        // Re-sync audio time if it has drifted, which can happen after long pauses.
-        if (Math.abs(audio.currentTime - targetTime) > 1) {
-          log(`[Player Sync] Correcting time drift. Browser time: ${audio.currentTime}, App time: ${targetTime}. Seeking before play.`);
-          audio.currentTime = targetTime;
-        }
+        // No more time drift correction. The browser will handle resuming from the correct currentTime.
         audio.play().catch(e => log(`[Player Error] Playback error: ${e instanceof Error ? e.message : String(e)}`));
       };
 
       // If the AudioContext was suspended by the browser (common for power-saving), resume it first.
-      // This "wakes up" the audio hardware gracefully and prevents the "tap" or "click" sound.
       if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
           log('[AudioContext] Resumed from suspended state.');
@@ -270,7 +263,7 @@ export default function App() {
     } else {
       audio.pause();
     }
-  }, [log, currentPodcastId, activePlayerTime]);
+  }, [log, currentPodcastId]);
 
   const startLoadingNewTrack = useCallback((trackId: string) => {
       log(`[App] startLoadingNewTrack called for id: ${trackId}`);
